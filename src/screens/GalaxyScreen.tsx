@@ -361,6 +361,90 @@ export default function GalaxyScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        
+        {/* Enemy Locator */}
+        <View style={{ marginTop: 20, marginBottom: 20 }}>
+          <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "bold", marginBottom: 12 }}>
+            Enemy Planets
+          </Text>
+          {aiPlanets.length === 0 ? (
+            <View
+              style={{
+                backgroundColor: theme.colors.card,
+                borderRadius: 10,
+                padding: 16,
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="shield-checkmark" size={32} color={theme.colors.success} />
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginTop: 8 }}>
+                No enemies detected in the galaxy
+              </Text>
+            </View>
+          ) : (
+            <>
+              {aiPlanets.map((planet) => (
+                <TouchableOpacity
+                  key={planet.id}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedGalaxy(planet.coordinates.galaxy);
+                    setSelectedSystem(planet.coordinates.system);
+                  }}
+                  activeOpacity={0.7}
+                  style={{
+                    backgroundColor: theme.colors.card,
+                    borderRadius: 10,
+                    padding: 12,
+                    marginBottom: 8,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    borderWidth: 1,
+                    borderColor: theme.colors.danger,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                      <Ionicons name="skull" size={16} color={theme.colors.danger} style={{ marginRight: 6 }} />
+                      <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                        {planet.name}
+                      </Text>
+                    </View>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                      [{planet.coordinates.galaxy}:{planet.coordinates.system}:{planet.coordinates.position}]
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                      <Ionicons name="locate" size={12} color={theme.colors.textSecondary} style={{ marginRight: 4 }} />
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
+                        {planet.maxFields} fields
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: "center" }}>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        // TODO: Open attack modal
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.danger + "20",
+                        padding: 10,
+                        borderRadius: 8,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <Ionicons name="rocket" size={20} color={theme.colors.danger} />
+                    </TouchableOpacity>
+                    <Ionicons name="navigate" size={16} color={theme.colors.danger} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

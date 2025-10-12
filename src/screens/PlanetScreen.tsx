@@ -1,7 +1,7 @@
 // PlanetScreen - main screen with tabs for Buildings, Research, Shipyard, Fleet
 
 import React from "react";
-import { View, ScrollView, Text } from "react-native";
+import { View, ScrollView, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import useGameStore from "../state/gameStore";
@@ -11,7 +11,45 @@ import PlanetSelector from "../components/PlanetSelector";
 import BuildingCard from "../components/BuildingCard";
 import TechnologyCard from "../components/TechnologyCard";
 import ShipCard from "../components/ShipCard";
-import { BuildingType, TechnologyType, ShipType } from "../types/game";
+import SendFleetModal from "../components/SendFleetModal";
+import { BuildingType, TechnologyType, ShipType, MissionType } from "../types/game";
+import { SHIP_STATS, SHIP_NAMES } from "../utils/gameConstants";
+import { formatNumber } from "../utils/gameFormulas";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+
+// Ship colors from ShipCard component
+const SHIP_COLORS: Record<ShipType, string[]> = {
+  [ShipType.LightFighter]: ["#64B5F6", "#42A5F5"],
+  [ShipType.HeavyFighter]: ["#FF7043", "#F4511E"],
+  [ShipType.Cruiser]: ["#9575CD", "#7E57C2"],
+  [ShipType.Battleship]: ["#E53935", "#C62828"],
+  [ShipType.Battlecruiser]: ["#D32F2F", "#B71C1C"],
+  [ShipType.Bomber]: ["#FFA726", "#FB8C00"],
+  [ShipType.Destroyer]: ["#7E57C2", "#5E35B1"],
+  [ShipType.Deathstar]: ["#212121", "#000000"],
+  [ShipType.SmallCargo]: ["#78909C", "#607D8B"],
+  [ShipType.LargeCargo]: ["#546E7A", "#455A64"],
+  [ShipType.ColonyShip]: ["#66BB6A", "#4CAF50"],
+  [ShipType.Recycler]: ["#4DB6AC", "#26A69A"],
+  [ShipType.EspionageProbe]: ["#90A4AE", "#78909C"],
+};
+
+const SHIP_ICONS: Record<ShipType, keyof typeof Ionicons.glyphMap> = {
+  [ShipType.LightFighter]: "airplane-outline",
+  [ShipType.HeavyFighter]: "airplane",
+  [ShipType.Cruiser]: "boat-outline",
+  [ShipType.Battleship]: "rocket-outline",
+  [ShipType.Battlecruiser]: "rocket",
+  [ShipType.Bomber]: "thunderstorm-outline",
+  [ShipType.Destroyer]: "skull-outline",
+  [ShipType.Deathstar]: "planet-outline",
+  [ShipType.SmallCargo]: "cube-outline",
+  [ShipType.LargeCargo]: "cube",
+  [ShipType.ColonyShip]: "home-outline",
+  [ShipType.Recycler]: "reload-outline",
+  [ShipType.EspionageProbe]: "eye-outline",
+};
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -235,11 +273,345 @@ function ShipyardTab() {
 
 function FleetTab() {
   const theme = useThemeStore((state) => state.theme);
+  const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
+  const planets = useGameStore((state) => state.player.planets);
+  const playerFleets = useGameStore((state) => state.player.fleets);
+  const [isSendFleetModalVisible, setIsSendFleetModalVisible] = React.useState(false);
+  
+  if (!selectedPlanetId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>No planet selected</Text>
+      </View>
+    );
+  }
+  
+  const planet = planets.find((p) => p.id === selectedPlanetId);
+  
+  if (!planet) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>Planet not found</Text>
+      </View>
+    );
+  }
+  
+  // Get ships on this planet
+  const availableShips = planet.fleet;
+  const totalShips = Object.values(availableShips).reduce((sum, count) => sum + count, 0);
+  
+  // Get fleets in transit from or to this planet
+  const fleetsInTransit = playerFleets.filter(
+    (fleet) =>
+      (fleet.origin.galaxy === planet.coordinates.galaxy &&
+        fleet.origin.system === planet.coordinates.system &&
+        fleet.origin.position === planet.coordinates.position) ||
+      (fleet.destination.galaxy === planet.coordinates.galaxy &&
+        fleet.destination.system === planet.coordinates.system &&
+        fleet.destination.position === planet.coordinates.position)
+  );
+  
+  const formatTimeRemaining = (timestamp: number) => {
+    const remaining = Math.max(0, timestamp - Date.now());
+    const seconds = Math.floor(remaining / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+  
+  const getMissionIcon = (mission: MissionType): keyof typeof Ionicons.glyphMap => {
+    switch (mission) {
+      case MissionType.Attack:
+        return "rocket";
+      case MissionType.Transport:
+        return "cube";
+      case MissionType.Colonize:
+        return "home";
+      case MissionType.Espionage:
+        return "eye";
+      case MissionType.Harvest:
+        return "reload";
+      case MissionType.Hold:
+        return "pause";
+      default:
+        return "airplane";
+    }
+  };
+  
+  const getMissionColor = (mission: MissionType): string => {
+    switch (mission) {
+      case MissionType.Attack:
+        return theme.colors.danger;
+      case MissionType.Transport:
+        return theme.colors.primary;
+      case MissionType.Colonize:
+        return theme.colors.success;
+      case MissionType.Espionage:
+        return theme.colors.secondary;
+      case MissionType.Harvest:
+        return theme.colors.crystal;
+      case MissionType.Hold:
+        return theme.colors.textSecondary;
+      default:
+        return theme.colors.text;
+    }
+  };
   
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: theme.colors.textSecondary }}>Fleet coming soon</Text>
-    </View>
+    <>
+      <SendFleetModal
+        visible={isSendFleetModalVisible}
+        onClose={() => setIsSendFleetModalVisible(false)}
+        planetId={selectedPlanetId}
+      />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        contentContainerStyle={{ padding: 16 }}
+      >
+        {/* Fleet Overview */}
+      <View
+        style={{
+          backgroundColor: theme.colors.card,
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        }}
+      >
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Fleet Overview
+        </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+          <View style={{ alignItems: "center" }}>
+            <Ionicons name="airplane" size={24} color={theme.colors.primary} />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+              On Planet
+            </Text>
+            <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700" }}>
+              {totalShips}
+            </Text>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Ionicons name="navigate" size={24} color={theme.colors.secondary} />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+              In Transit
+            </Text>
+            <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700" }}>
+              {fleetsInTransit.length}
+            </Text>
+          </View>
+        </View>
+      </View>
+      
+      {/* Available Ships */}
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Available Ships
+        </Text>
+        {totalShips === 0 ? (
+          <View
+            style={{
+              backgroundColor: theme.colors.card,
+              borderRadius: 12,
+              padding: 20,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+            }}
+          >
+            <Ionicons name="construct" size={32} color={theme.colors.textSecondary} />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: "center" }}>
+              No ships on this planet
+            </Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: "center" }}>
+              Build ships in the Shipyard tab
+            </Text>
+          </View>
+        ) : (
+          <View
+            style={{
+              backgroundColor: theme.colors.card,
+              borderRadius: 12,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+            }}
+          >
+            {Object.entries(availableShips)
+              .filter(([_, count]) => count > 0)
+              .map(([shipType, count]) => {
+                const stats = SHIP_STATS[shipType as ShipType];
+                const name = SHIP_NAMES[shipType as ShipType];
+                const colors = SHIP_COLORS[shipType as ShipType];
+                const icon = SHIP_ICONS[shipType as ShipType];
+                
+                return (
+                  <View
+                    key={shipType}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderBottomColor: theme.colors.border,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 20,
+                        backgroundColor: colors[0] + "30",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginRight: 12,
+                      }}
+                    >
+                      <Ionicons name={icon} size={20} color={colors[0]} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                        {name}
+                      </Text>
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                        Attack: {formatNumber(stats.attack)} • Speed: {formatNumber(stats.speed)}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: theme.colors.primary, fontSize: 16, fontWeight: "700" }}>
+                        {count}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+          </View>
+        )}
+      </View>
+      
+      {/* Fleets in Transit */}
+      {fleetsInTransit.length > 0 && (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+            Fleets in Transit
+          </Text>
+          {fleetsInTransit.map((fleet) => {
+            const isOutgoing =
+              fleet.origin.galaxy === planet.coordinates.galaxy &&
+              fleet.origin.system === planet.coordinates.system &&
+              fleet.origin.position === planet.coordinates.position;
+            const timeToUse = fleet.isReturning ? fleet.returnTime : fleet.arrivalTime;
+            const totalFleetShips = Object.values(fleet.ships).reduce((sum, count) => sum + count, 0);
+            
+            return (
+              <View
+                key={fleet.id}
+                style={{
+                  backgroundColor: theme.colors.card,
+                  borderRadius: 12,
+                  padding: 14,
+                  marginBottom: 10,
+                  borderWidth: 1,
+                  borderLeftWidth: 4,
+                  borderColor: theme.colors.border,
+                  borderLeftColor: getMissionColor(fleet.mission),
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: getMissionColor(fleet.mission) + "20",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 10,
+                    }}
+                  >
+                    <Ionicons
+                      name={getMissionIcon(fleet.mission)}
+                      size={18}
+                      color={getMissionColor(fleet.mission)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                      {fleet.mission.charAt(0).toUpperCase() + fleet.mission.slice(1)} Mission
+                    </Text>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                      {isOutgoing ? "Outgoing" : "Returning"} • {totalFleetShips} ships
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+                  <View>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
+                      {isOutgoing ? "To" : "From"}
+                    </Text>
+                    <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+                      [{isOutgoing ? fleet.destination.galaxy : fleet.origin.galaxy}:
+                      {isOutgoing ? fleet.destination.system : fleet.origin.system}:
+                      {isOutgoing ? fleet.destination.position : fleet.origin.position}]
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
+                      Arrival
+                    </Text>
+                    <Text style={{ color: theme.colors.success, fontSize: 12, fontWeight: "600" }}>
+                      {timeToUse ? formatTimeRemaining(timeToUse) : "N/A"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+      
+      {/* Send Fleet Button */}
+      {totalShips > 0 && (
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setIsSendFleetModalVisible(true);
+          }}
+          activeOpacity={0.7}
+          style={{
+            backgroundColor: theme.colors.primary,
+            borderRadius: 12,
+            padding: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 20,
+          }}
+        >
+          <Ionicons name="rocket" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
+            Send Fleet
+          </Text>
+        </TouchableOpacity>
+      )}
+    </ScrollView>
+    </>
   );
 }
 
