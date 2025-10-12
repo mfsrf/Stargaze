@@ -18,10 +18,10 @@ export default function SettingsScreen() {
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
   const addResourcesToPlanet = useGameStore((state) => state.addResourcesToPlanet);
   
-  const handleAddResources = () => {
+  const handleAddResources = (amount: number) => {
     if (selectedPlanetId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      addResourcesToPlanet(selectedPlanetId, 1000);
+      addResourcesToPlanet(selectedPlanetId, amount);
     }
   };
   
@@ -212,31 +212,84 @@ export default function SettingsScreen() {
           <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
             Quick actions for testing gameplay features
           </Text>
-          <TouchableOpacity
-            onPress={handleAddResources}
-            activeOpacity={0.7}
-            style={{
-              backgroundColor: theme.colors.success,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              borderRadius: 8,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              shadowColor: theme.colors.success,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 4,
-              elevation: 3,
-            }}
-          >
-            <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
-              Add +1000 Resources
-            </Text>
-          </TouchableOpacity>
+          
+          {/* Resource buttons in a grid */}
+          <View style={{ gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => handleAddResources(1000)}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: theme.colors.success,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: theme.colors.success,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                Add +1,000 Resources
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => handleAddResources(5000)}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: theme.colors.primary,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: theme.colors.primary,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                Add +5,000 Resources
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => handleAddResources(10000)}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: theme.colors.warning,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: theme.colors.warning,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                Add +10,000 Resources
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
           <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginTop: 8, textAlign: "center" }}>
-            Adds 1000 metal, crystal, and deuterium to selected planet
+            Adds metal, crystal, and deuterium to selected planet
           </Text>
         </View>
         
