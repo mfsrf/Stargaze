@@ -10,7 +10,8 @@ import ResourceBar from "../components/ResourceBar";
 import PlanetSelector from "../components/PlanetSelector";
 import BuildingCard from "../components/BuildingCard";
 import TechnologyCard from "../components/TechnologyCard";
-import { BuildingType, TechnologyType } from "../types/game";
+import ShipCard from "../components/ShipCard";
+import { BuildingType, TechnologyType, ShipType } from "../types/game";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -150,11 +151,85 @@ function ResearchTab() {
 
 function ShipyardTab() {
   const theme = useThemeStore((state) => state.theme);
+  const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
+  const planets = useGameStore((state) => state.player.planets);
+  
+  if (!selectedPlanetId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>No planet selected</Text>
+      </View>
+    );
+  }
+  
+  const planet = planets.find((p) => p.id === selectedPlanetId);
+  
+  if (!planet) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>Planet not found</Text>
+      </View>
+    );
+  }
+  
+  // Check if shipyard exists
+  if (planet.buildings[BuildingType.Shipyard] === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <Text style={{ color: theme.colors.textSecondary, textAlign: "center", marginBottom: 8 }}>
+          You need to build a Shipyard first!
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, textAlign: "center", fontSize: 12 }}>
+          (Go to Buildings tab → Facilities)
+        </Text>
+      </View>
+    );
+  }
+  
+  const combatShips = [
+    ShipType.LightFighter,
+    ShipType.HeavyFighter,
+    ShipType.Cruiser,
+    ShipType.Battleship,
+    ShipType.Battlecruiser,
+    ShipType.Bomber,
+    ShipType.Destroyer,
+    ShipType.Deathstar,
+  ];
+  
+  const civilShips = [
+    ShipType.SmallCargo,
+    ShipType.LargeCargo,
+    ShipType.ColonyShip,
+    ShipType.Recycler,
+    ShipType.EspionageProbe,
+  ];
   
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: theme.colors.textSecondary }}>Shipyard coming soon</Text>
-    </View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={{ padding: 16 }}
+    >
+      {/* Combat Ships Section */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Combat Ships
+        </Text>
+        {combatShips.map((shipType) => (
+          <ShipCard key={shipType} shipType={shipType} planetId={selectedPlanetId} />
+        ))}
+      </View>
+      
+      {/* Civil Ships Section */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Civil Ships
+        </Text>
+        {civilShips.map((shipType) => (
+          <ShipCard key={shipType} shipType={shipType} planetId={selectedPlanetId} />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
