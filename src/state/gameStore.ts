@@ -130,6 +130,7 @@ const useGameStore = create<GameStore>()(
         speedMultiplier: 1,
         notificationsEnabled: true,
         darkMode: true,
+        instantBuild: false,
       },
       lastUpdate: Date.now(),
       gameStartTime: 0,

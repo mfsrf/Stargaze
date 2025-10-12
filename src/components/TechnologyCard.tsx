@@ -1,4 +1,4 @@
-// BuildingCard component - displays building info and upgrade button
+// TechnologyCard component - displays technology info and research button
 
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
@@ -7,99 +7,101 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
-import { BuildingType } from "../types/game";
+import { TechnologyType, BuildingType } from "../types/game";
 import {
-  getBuildingCost,
-  getBuildingConstructionTime,
+  getTechnologyCost,
+  getTechnologyResearchTime,
   canAfford,
   formatNumber,
   formatDuration,
 } from "../utils/gameFormulas";
-import { BUILDING_NAMES } from "../utils/gameConstants";
+import { TECHNOLOGY_NAMES } from "../utils/gameConstants";
 
-interface BuildingCardProps {
-  buildingType: BuildingType;
-  planetId: string;
+interface TechnologyCardProps {
+  technologyType: TechnologyType;
 }
 
-const BUILDING_ICONS: Record<BuildingType, keyof typeof Ionicons.glyphMap> = {
-  [BuildingType.MetalMine]: "hammer",
-  [BuildingType.CrystalMine]: "diamond",
-  [BuildingType.DeuteriumSynthesizer]: "water",
-  [BuildingType.SolarPlant]: "sunny",
-  [BuildingType.FusionReactor]: "nuclear",
-  [BuildingType.MetalStorage]: "cube",
-  [BuildingType.CrystalStorage]: "cube-outline",
-  [BuildingType.DeuteriumTank]: "flask",
-  [BuildingType.RoboticsFactory]: "construct",
-  [BuildingType.Shipyard]: "rocket",
-  [BuildingType.ResearchLab]: "flask-outline",
-  [BuildingType.AllianceDepot]: "people",
-  [BuildingType.NaniteFactory]: "hardware-chip",
-  [BuildingType.Terraformer]: "globe",
+const TECHNOLOGY_ICONS: Record<TechnologyType, keyof typeof Ionicons.glyphMap> = {
+  [TechnologyType.EnergyTech]: "flash",
+  [TechnologyType.LaserTech]: "radio-button-on",
+  [TechnologyType.IonTech]: "nuclear",
+  [TechnologyType.HyperspaceTech]: "planet",
+  [TechnologyType.PlasmaTech]: "flame",
+  [TechnologyType.CombustionDrive]: "rocket",
+  [TechnologyType.ImpulseDrive]: "airplane",
+  [TechnologyType.HyperspaceDrive]: "sparkles",
+  [TechnologyType.EspionageTech]: "eye",
+  [TechnologyType.ComputerTech]: "hardware-chip",
+  [TechnologyType.Astrophysics]: "telescope",
+  [TechnologyType.WeaponsTech]: "trending-up",
+  [TechnologyType.ShieldingTech]: "shield",
+  [TechnologyType.ArmorTech]: "shield-checkmark",
 };
 
-const BUILDING_COLORS: Record<BuildingType, string[]> = {
-  [BuildingType.MetalMine]: ["#A0826D", "#8B7355"],
-  [BuildingType.CrystalMine]: ["#64B5F6", "#4A90E2"],
-  [BuildingType.DeuteriumSynthesizer]: ["#66BB6A", "#50C878"],
-  [BuildingType.SolarPlant]: ["#FFD54F", "#FFD700"],
-  [BuildingType.FusionReactor]: ["#FF6B6B", "#FF4757"],
-  [BuildingType.MetalStorage]: ["#757575", "#616161"],
-  [BuildingType.CrystalStorage]: ["#9575CD", "#7E57C2"],
-  [BuildingType.DeuteriumTank]: ["#4DB6AC", "#26A69A"],
-  [BuildingType.RoboticsFactory]: ["#FFA726", "#FB8C00"],
-  [BuildingType.Shipyard]: ["#5E35B1", "#512DA8"],
-  [BuildingType.ResearchLab]: ["#29B6F6", "#039BE5"],
-  [BuildingType.AllianceDepot]: ["#EC407A", "#D81B60"],
-  [BuildingType.NaniteFactory]: ["#AB47BC", "#8E24AA"],
-  [BuildingType.Terraformer]: ["#66BB6A", "#43A047"],
+const TECHNOLOGY_COLORS: Record<TechnologyType, string[]> = {
+  [TechnologyType.EnergyTech]: ["#FFD54F", "#FFC107"],
+  [TechnologyType.LaserTech]: ["#FF6B6B", "#E74C3C"],
+  [TechnologyType.IonTech]: ["#9575CD", "#7E57C2"],
+  [TechnologyType.HyperspaceTech]: ["#4FC3F7", "#29B6F6"],
+  [TechnologyType.PlasmaTech]: ["#FF6B9D", "#E91E63"],
+  [TechnologyType.CombustionDrive]: ["#FF9800", "#F57C00"],
+  [TechnologyType.ImpulseDrive]: ["#42A5F5", "#1E88E5"],
+  [TechnologyType.HyperspaceDrive]: ["#AB47BC", "#8E24AA"],
+  [TechnologyType.EspionageTech]: ["#78909C", "#546E7A"],
+  [TechnologyType.ComputerTech]: ["#26C6DA", "#00ACC1"],
+  [TechnologyType.Astrophysics]: ["#7E57C2", "#5E35B1"],
+  [TechnologyType.WeaponsTech]: ["#EF5350", "#D32F2F"],
+  [TechnologyType.ShieldingTech]: ["#66BB6A", "#43A047"],
+  [TechnologyType.ArmorTech]: ["#8D6E63", "#6D4C41"],
 };
 
-export default function BuildingCard({ buildingType, planetId }: BuildingCardProps) {
+export default function TechnologyCard({ technologyType }: TechnologyCardProps) {
   const theme = useThemeStore((state) => state.theme);
-  const planet = useGameStore((state) =>
-    state.player.planets.find((p) => p.id === planetId)
-  );
-  const upgradeBuilding = useGameStore((state) => state.upgradeBuilding);
+  const technologies = useGameStore((state) => state.player.technologies);
+  const planets = useGameStore((state) => state.player.planets);
+  const researchQueue = useGameStore((state) => state.researchQueue);
+  const startResearch = useGameStore((state) => state.startResearch);
   const instantBuild = useGameStore((state) => state.settings.instantBuild);
-  const finishConstruction = useGameStore((state) => state.finishConstruction);
   
-  if (!planet) return null;
+  const currentLevel = technologies[technologyType];
+  const cost = getTechnologyCost(technologyType, currentLevel);
   
-  const currentLevel = planet.buildings[buildingType];
-  const cost = getBuildingCost(buildingType, currentLevel);
-  const constructionTime = getBuildingConstructionTime(
-    buildingType,
+  // Find best research lab
+  const bestLabPlanet = planets.reduce((best, planet) => {
+    const labLevel = planet.buildings[BuildingType.ResearchLab];
+    const bestLabLevel = best?.buildings[BuildingType.ResearchLab] || 0;
+    return labLevel > bestLabLevel ? planet : best;
+  }, planets[0]);
+  
+  const researchTime = getTechnologyResearchTime(
+    technologyType,
     currentLevel,
-    planet.buildings[BuildingType.RoboticsFactory],
-    planet.buildings[BuildingType.NaniteFactory]
+    bestLabPlanet?.buildings[BuildingType.ResearchLab] || 0
   );
   
-  const isUnderConstruction =
-    planet.constructionQueue?.type === buildingType;
-  const canUpgrade = canAfford(planet.resources, cost) && !planet.constructionQueue;
+  const isUnderResearch = researchQueue?.type === technologyType;
+  const canResearch = !researchQueue && bestLabPlanet && canAfford(bestLabPlanet.resources, cost);
   
-  const handleUpgrade = () => {
-    if (canUpgrade) {
+  const handleResearch = () => {
+    if (canResearch) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const success = upgradeBuilding(planetId, buildingType);
+      const success = startResearch(technologyType);
       if (success && instantBuild) {
-        // Instantly complete construction
+        // Instantly complete research
         setTimeout(() => {
-          finishConstruction(planetId);
+          useGameStore.getState().finishResearch();
         }, 100);
       }
     }
   };
   
-  const progress = isUnderConstruction && planet.constructionQueue
-    ? ((Date.now() - planet.constructionQueue.startTime) /
-        (planet.constructionQueue.endTime - planet.constructionQueue.startTime)) * 100
+  const progress = isUnderResearch && researchQueue
+    ? ((Date.now() - researchQueue.startTime) /
+        (researchQueue.endTime - researchQueue.startTime)) * 100
     : 0;
   
-  const timeRemaining = isUnderConstruction && planet.constructionQueue
-    ? Math.max(0, planet.constructionQueue.endTime - Date.now()) / 1000
+  const timeRemaining = isUnderResearch && researchQueue
+    ? Math.max(0, researchQueue.endTime - Date.now()) / 1000
     : 0;
   
   return (
@@ -115,7 +117,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
     >
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
         <LinearGradient
-          colors={[BUILDING_COLORS[buildingType][0] + "60", BUILDING_COLORS[buildingType][1] + "30"]}
+          colors={[TECHNOLOGY_COLORS[technologyType][0] + "60", TECHNOLOGY_COLORS[technologyType][1] + "30"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -125,7 +127,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             alignItems: "center",
             justifyContent: "center",
             marginRight: 12,
-            shadowColor: BUILDING_COLORS[buildingType][0],
+            shadowColor: TECHNOLOGY_COLORS[technologyType][0],
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
             shadowRadius: 4,
@@ -133,14 +135,14 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
           }}
         >
           <Ionicons
-            name={BUILDING_ICONS[buildingType]}
+            name={TECHNOLOGY_ICONS[technologyType]}
             size={30}
-            color={BUILDING_COLORS[buildingType][0]}
+            color={TECHNOLOGY_COLORS[technologyType][0]}
           />
         </LinearGradient>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontSize: 17, fontWeight: "700" }}>
-            {BUILDING_NAMES[buildingType]}
+            {TECHNOLOGY_NAMES[technologyType]}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
             <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
@@ -149,13 +151,13 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             {currentLevel > 0 && (
               <View style={{ 
                 marginLeft: 8, 
-                backgroundColor: theme.colors.success + "20",
+                backgroundColor: theme.colors.primary + "20",
                 paddingHorizontal: 6,
                 paddingVertical: 2,
                 borderRadius: 4,
               }}>
-                <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: "600" }}>
-                  Active
+                <Text style={{ color: theme.colors.primary, fontSize: 10, fontWeight: "600" }}>
+                  Researched
                 </Text>
               </View>
             )}
@@ -163,7 +165,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
         </View>
       </View>
       
-      {isUnderConstruction ? (
+      {isUnderResearch ? (
         <View>
           <View style={{ marginBottom: 8 }}>
             <View
@@ -175,7 +177,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
               }}
             >
               <LinearGradient
-                colors={[theme.colors.success, theme.colors.primary]}
+                colors={[theme.colors.secondary, theme.colors.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
@@ -186,14 +188,14 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             </View>
           </View>
           <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" }}>
-            Upgrading to Level {currentLevel + 1} - {formatDuration(timeRemaining)}
+            Researching Level {currentLevel + 1} - {formatDuration(timeRemaining)}
           </Text>
         </View>
       ) : (
         <>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 4 }}>
-              Upgrade Cost:
+              Research Cost:
             </Text>
             <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
               {cost.metal > 0 && (
@@ -201,7 +203,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                   <Ionicons name="hammer" size={14} color={theme.colors.metal} />
                   <Text
                     style={{
-                      color: planet.resources.metal >= cost.metal ? theme.colors.text : theme.colors.danger,
+                      color: bestLabPlanet && bestLabPlanet.resources.metal >= cost.metal ? theme.colors.text : theme.colors.danger,
                       fontSize: 12,
                     }}
                   >
@@ -214,7 +216,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                   <Ionicons name="diamond" size={14} color={theme.colors.crystal} />
                   <Text
                     style={{
-                      color: planet.resources.crystal >= cost.crystal ? theme.colors.text : theme.colors.danger,
+                      color: bestLabPlanet && bestLabPlanet.resources.crystal >= cost.crystal ? theme.colors.text : theme.colors.danger,
                       fontSize: 12,
                     }}
                   >
@@ -227,7 +229,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                   <Ionicons name="water" size={14} color={theme.colors.deuterium} />
                   <Text
                     style={{
-                      color: planet.resources.deuterium >= cost.deuterium ? theme.colors.text : theme.colors.danger,
+                      color: bestLabPlanet && bestLabPlanet.resources.deuterium >= cost.deuterium ? theme.colors.text : theme.colors.danger,
                       fontSize: 12,
                     }}
                   >
@@ -237,27 +239,27 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
               )}
             </View>
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10, textAlign: "center", marginTop: 4 }}>
-              Time: {formatDuration(constructionTime)}
+              Time: {formatDuration(researchTime)}
             </Text>
           </View>
           
           <TouchableOpacity
-            onPress={handleUpgrade}
-            disabled={!canUpgrade}
+            onPress={handleResearch}
+            disabled={!canResearch}
             activeOpacity={0.7}
             style={{
               borderRadius: 10,
               overflow: "hidden",
-              shadowColor: canUpgrade ? theme.colors.primary : "transparent",
+              shadowColor: canResearch ? theme.colors.secondary : "transparent",
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.3,
               shadowRadius: 4,
-              elevation: canUpgrade ? 3 : 0,
+              elevation: canResearch ? 3 : 0,
             }}
           >
-            {canUpgrade ? (
+            {canResearch ? (
               <LinearGradient
-                colors={[theme.colors.primary, theme.colors.secondary]}
+                colors={[theme.colors.secondary, theme.colors.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{
@@ -273,7 +275,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                     fontWeight: "700",
                   }}
                 >
-                  Upgrade to Level {currentLevel + 1}
+                  Research Level {currentLevel + 1}
                 </Text>
               </LinearGradient>
             ) : (
@@ -292,7 +294,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                     fontWeight: "600",
                   }}
                 >
-                  {planet.constructionQueue ? "Building..." : "Insufficient Resources"}
+                  {researchQueue ? "Already Researching" : "Insufficient Resources"}
                 </Text>
               </View>
             )}

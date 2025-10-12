@@ -280,6 +280,7 @@ export interface GameSettings {
   speedMultiplier: number;
   notificationsEnabled: boolean;
   darkMode: boolean;
+  instantBuild: boolean;
 }
 
 export interface GameState {

@@ -13,6 +13,7 @@ export default function SettingsScreen() {
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
   const resetGame = useGameStore((state) => state.resetGame);
   const resourceMultiplier = useGameStore((state) => state.settings.resourceMultiplier);
+  const instantBuild = useGameStore((state) => state.settings.instantBuild);
   const updateSettings = useGameStore((state) => state.updateSettings);
   
   const handleResetGame = () => {
@@ -77,6 +78,45 @@ export default function SettingsScreen() {
             value={theme.dark}
             onValueChange={handleToggleDarkMode}
             trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+        
+        {/* Instant Build Toggle */}
+        <View
+          style={{
+            backgroundColor: theme.colors.card,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+            <Ionicons
+              name="flash"
+              size={24}
+              color={theme.colors.warning}
+              style={{ marginRight: 12 }}
+            />
+            <View>
+              <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600" }}>
+                Instant Build
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                {instantBuild ? "Buildings & research complete instantly" : "Normal construction times"}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={instantBuild}
+            onValueChange={(value) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              updateSettings({ instantBuild: value });
+            }}
+            trackColor={{ false: theme.colors.border, true: theme.colors.warning }}
             thumbColor="#FFFFFF"
           />
         </View>

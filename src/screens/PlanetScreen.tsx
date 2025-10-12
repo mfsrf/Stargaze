@@ -9,7 +9,8 @@ import useThemeStore from "../state/themeStore";
 import ResourceBar from "../components/ResourceBar";
 import PlanetSelector from "../components/PlanetSelector";
 import BuildingCard from "../components/BuildingCard";
-import { BuildingType } from "../types/game";
+import TechnologyCard from "../components/TechnologyCard";
+import { BuildingType, TechnologyType } from "../types/game";
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -78,11 +79,72 @@ function BuildingsTab() {
 
 function ResearchTab() {
   const theme = useThemeStore((state) => state.theme);
+  const planets = useGameStore((state) => state.player.planets);
+  
+  const hasResearchLab = planets.some((p) => p.buildings[BuildingType.ResearchLab] > 0);
+  
+  if (!hasResearchLab) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
+          Research Lab Required
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 14, textAlign: "center" }}>
+          Build a Research Lab in the Buildings tab to unlock technologies.
+        </Text>
+      </View>
+    );
+  }
+  
+  const driveTechnologies = [
+    TechnologyType.CombustionDrive,
+    TechnologyType.ImpulseDrive,
+    TechnologyType.HyperspaceDrive,
+  ];
+  
+  const weaponTechnologies = [
+    TechnologyType.EnergyTech,
+    TechnologyType.LaserTech,
+    TechnologyType.IonTech,
+    TechnologyType.PlasmaTech,
+    TechnologyType.WeaponsTech,
+    TechnologyType.ShieldingTech,
+    TechnologyType.ArmorTech,
+  ];
+  
+  const advancedTechnologies = [
+    TechnologyType.HyperspaceTech,
+    TechnologyType.EspionageTech,
+    TechnologyType.ComputerTech,
+    TechnologyType.Astrophysics,
+  ];
   
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: theme.colors.textSecondary }}>Research coming soon</Text>
-    </View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={{ padding: 16 }}
+    >
+      <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
+        Propulsion Systems
+      </Text>
+      {driveTechnologies.map((tech) => (
+        <TechnologyCard key={tech} technologyType={tech} />
+      ))}
+      
+      <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 12, marginTop: 12 }}>
+        Combat Technologies
+      </Text>
+      {weaponTechnologies.map((tech) => (
+        <TechnologyCard key={tech} technologyType={tech} />
+      ))}
+      
+      <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 12, marginTop: 12 }}>
+        Advanced Research
+      </Text>
+      {advancedTechnologies.map((tech) => (
+        <TechnologyCard key={tech} technologyType={tech} />
+      ))}
+    </ScrollView>
   );
 }
 
