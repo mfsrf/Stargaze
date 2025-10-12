@@ -32,9 +32,9 @@ export const BUILDING_BASE_COSTS: Record<BuildingType, Resources> = {
 
 // Base production per hour at level 1
 export const BASE_PRODUCTION: Record<string, number> = {
-  metal: 30,
-  crystal: 20,
-  deuterium: 10,
+  metal: 600,
+  crystal: 400,
+  deuterium: 200,
 };
 
 // Energy consumption per level

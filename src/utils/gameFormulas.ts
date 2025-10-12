@@ -91,7 +91,7 @@ export function calculateMetalProduction(
   mineLevel: number,
   resourceMultiplier: number
 ): number {
-  if (mineLevel === 0) return 30 * resourceMultiplier; // Base production
+  if (mineLevel === 0) return 600 * resourceMultiplier; // Base production
   return Math.floor(BASE_PRODUCTION.metal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier);
 }
 
@@ -102,7 +102,7 @@ export function calculateCrystalProduction(
   mineLevel: number,
   resourceMultiplier: number
 ): number {
-  if (mineLevel === 0) return 15 * resourceMultiplier; // Base production
+  if (mineLevel === 0) return 300 * resourceMultiplier; // Base production
   return Math.floor(BASE_PRODUCTION.crystal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier);
 }
 
