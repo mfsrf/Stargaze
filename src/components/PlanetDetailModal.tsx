@@ -12,6 +12,8 @@ import {
   getPlanetTypeDescription,
   getPlanetTypeColor,
   getPlanetResourceBonus,
+  getPlanetType,
+  calculateTemperature,
 } from "../utils/galaxyManager";
 import { formatNumber } from "../utils/gameFormulas";
 
@@ -32,10 +34,14 @@ export default function PlanetDetailModal({
 
   if (!planet) return null;
 
-  const planetColor = getPlanetTypeColor(planet.type);
-  const planetTypeName = getPlanetTypeName(planet.type);
-  const planetDescription = getPlanetTypeDescription(planet.type);
-  const resourceBonus = getPlanetResourceBonus(planet.type);
+  // If planet doesn't have a type, assign one based on position
+  const planetType = planet.type || getPlanetType(planet.coordinates.position);
+  const planetTemp = planet.temperature ?? calculateTemperature(planet.coordinates.position);
+  
+  const planetColor = getPlanetTypeColor(planetType);
+  const planetTypeName = getPlanetTypeName(planetType);
+  const planetDescription = getPlanetTypeDescription(planetType);
+  const resourceBonus = getPlanetResourceBonus(planetType);
   
   // Safety check for undefined bonuses
   const safeResourceBonus = {
@@ -153,7 +159,7 @@ export default function PlanetDetailModal({
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
                 <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Temperature:</Text>
                 <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
-                  {planet.temperature}°C
+                  {planetTemp}°C
                 </Text>
               </View>
               
