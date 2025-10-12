@@ -1,7 +1,7 @@
 // SettingsScreen - game settings and dark mode toggle
 
 import React from "react";
-import { View, Text, ScrollView, Pressable, Switch, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -108,13 +108,14 @@ export default function SettingsScreen() {
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 8 }}>
             {[1, 5, 10, 25, 50].map((multiplier) => (
-              <Pressable
+              <TouchableOpacity
                 key={multiplier}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   updateSettings({ resourceMultiplier: multiplier });
                 }}
-                style={({ pressed }) => ({
+                activeOpacity={0.7}
+                style={{
                   backgroundColor:
                     resourceMultiplier === multiplier
                       ? theme.colors.primary
@@ -122,8 +123,7 @@ export default function SettingsScreen() {
                   paddingVertical: 10,
                   paddingHorizontal: 16,
                   borderRadius: 8,
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                }}
               >
                 <Text
                   style={{
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
                 >
                   {multiplier}x
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -169,22 +169,22 @@ export default function SettingsScreen() {
         </View>
         
         {/* Reset Game */}
-        <Pressable
+        <TouchableOpacity
           onPress={handleResetGame}
-          style={({ pressed }) => ({
+          activeOpacity={0.7}
+          style={{
             backgroundColor: theme.colors.danger,
             paddingVertical: 16,
             paddingHorizontal: 32,
             borderRadius: 12,
             alignItems: "center",
             marginTop: 16,
-            opacity: pressed ? 0.7 : 1,
-          })}
+          }}
         >
           <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "bold" }}>
             Reset Game
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

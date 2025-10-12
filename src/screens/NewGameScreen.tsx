@@ -1,7 +1,7 @@
 // NewGameScreen - initial setup for new games
 
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -104,13 +104,14 @@ export default function NewGameScreen() {
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 8 }}>
             {Array.from({ length: GALAXY_CONFIG.galaxies }, (_, i) => i + 1).map((galaxy) => (
-              <Pressable
+              <TouchableOpacity
                 key={galaxy}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setSelectedGalaxy(galaxy);
                 }}
-                style={({ pressed }) => ({
+                activeOpacity={0.7}
+                style={{
                   backgroundColor:
                     selectedGalaxy === galaxy
                       ? theme.colors.primary
@@ -119,11 +120,10 @@ export default function NewGameScreen() {
                   paddingHorizontal: 20,
                   borderRadius: 8,
                   margin: 4,
-                  opacity: pressed ? 0.7 : 1,
                   borderWidth: 1,
                   borderColor:
                     selectedGalaxy === galaxy ? theme.colors.primary : theme.colors.border,
-                })}
+                }}
               >
                 <Text
                   style={{
@@ -134,7 +134,7 @@ export default function NewGameScreen() {
                 >
                   Galaxy {galaxy}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -153,13 +153,14 @@ export default function NewGameScreen() {
           </Text>
           <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 8 }}>
             {[3, 4, 5].map((count) => (
-              <Pressable
+              <TouchableOpacity
                 key={count}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setAiCount(count);
                 }}
-                style={({ pressed }) => ({
+                activeOpacity={0.7}
+                style={{
                   backgroundColor:
                     aiCount === count ? theme.colors.primary : theme.colors.inputBackground,
                   paddingVertical: 16,
@@ -167,12 +168,11 @@ export default function NewGameScreen() {
                   borderRadius: 12,
                   flex: 1,
                   marginHorizontal: 4,
-                  opacity: pressed ? 0.7 : 1,
                   borderWidth: 1,
                   borderColor:
                     aiCount === count ? theme.colors.primary : theme.colors.border,
                   alignItems: "center",
-                })}
+                }}
               >
                 <Text
                   style={{
@@ -192,23 +192,23 @@ export default function NewGameScreen() {
                 >
                   {count === 3 ? "Easy" : count === 4 ? "Medium" : "Hard"}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
         
         {/* Start Button */}
-        <Pressable
+        <TouchableOpacity
           onPress={handleStartGame}
           disabled={!empireName.trim()}
-          style={({ pressed }) => ({
+          activeOpacity={0.7}
+          style={{
             backgroundColor: empireName.trim() ? theme.colors.primary : theme.colors.border,
             paddingVertical: 16,
             paddingHorizontal: 32,
             borderRadius: 12,
             alignItems: "center",
-            opacity: pressed ? 0.7 : 1,
-          })}
+          }}
         >
           <Text
             style={{
@@ -219,7 +219,7 @@ export default function NewGameScreen() {
           >
             Start Game
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

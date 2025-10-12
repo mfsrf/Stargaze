@@ -1,8 +1,9 @@
 // BuildingCard component - displays building info and upgrade button
 
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
@@ -36,6 +37,23 @@ const BUILDING_ICONS: Record<BuildingType, keyof typeof Ionicons.glyphMap> = {
   [BuildingType.AllianceDepot]: "people",
   [BuildingType.NaniteFactory]: "hardware-chip",
   [BuildingType.Terraformer]: "globe",
+};
+
+const BUILDING_COLORS: Record<BuildingType, string[]> = {
+  [BuildingType.MetalMine]: ["#A0826D", "#8B7355"],
+  [BuildingType.CrystalMine]: ["#64B5F6", "#4A90E2"],
+  [BuildingType.DeuteriumSynthesizer]: ["#66BB6A", "#50C878"],
+  [BuildingType.SolarPlant]: ["#FFD54F", "#FFD700"],
+  [BuildingType.FusionReactor]: ["#FF6B6B", "#FF4757"],
+  [BuildingType.MetalStorage]: ["#757575", "#616161"],
+  [BuildingType.CrystalStorage]: ["#9575CD", "#7E57C2"],
+  [BuildingType.DeuteriumTank]: ["#4DB6AC", "#26A69A"],
+  [BuildingType.RoboticsFactory]: ["#FFA726", "#FB8C00"],
+  [BuildingType.Shipyard]: ["#5E35B1", "#512DA8"],
+  [BuildingType.ResearchLab]: ["#29B6F6", "#039BE5"],
+  [BuildingType.AllianceDepot]: ["#EC407A", "#D81B60"],
+  [BuildingType.NaniteFactory]: ["#AB47BC", "#8E24AA"],
+  [BuildingType.Terraformer]: ["#66BB6A", "#43A047"],
 };
 
 export default function BuildingCard({ buildingType, planetId }: BuildingCardProps) {
@@ -88,30 +106,52 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-        <View
+        <LinearGradient
+          colors={[BUILDING_COLORS[buildingType][0] + "60", BUILDING_COLORS[buildingType][1] + "30"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: theme.colors.primary + "20",
+            width: 56,
+            height: 56,
+            borderRadius: 28,
             alignItems: "center",
             justifyContent: "center",
             marginRight: 12,
+            shadowColor: BUILDING_COLORS[buildingType][0],
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
           }}
         >
           <Ionicons
             name={BUILDING_ICONS[buildingType]}
-            size={24}
-            color={theme.colors.primary}
+            size={30}
+            color={BUILDING_COLORS[buildingType][0]}
           />
-        </View>
+        </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600" }}>
+          <Text style={{ color: theme.colors.text, fontSize: 17, fontWeight: "700" }}>
             {BUILDING_NAMES[buildingType]}
           </Text>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
-            Level {currentLevel}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+              Level {currentLevel}
+            </Text>
+            {currentLevel > 0 && (
+              <View style={{ 
+                marginLeft: 8, 
+                backgroundColor: theme.colors.success + "20",
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}>
+                <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: "600" }}>
+                  Active
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
       
@@ -120,17 +160,19 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
           <View style={{ marginBottom: 8 }}>
             <View
               style={{
-                height: 4,
+                height: 6,
                 backgroundColor: theme.colors.border,
-                borderRadius: 2,
+                borderRadius: 3,
                 overflow: "hidden",
               }}
             >
-              <View
+              <LinearGradient
+                colors={[theme.colors.success, theme.colors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
                 style={{
                   height: "100%",
                   width: `${progress}%`,
-                  backgroundColor: theme.colors.success,
                 }}
               />
             </View>
@@ -191,28 +233,62 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             </Text>
           </View>
           
-          <Pressable
+          <TouchableOpacity
             onPress={handleUpgrade}
             disabled={!canUpgrade}
-            style={({ pressed }) => ({
-              backgroundColor: canUpgrade ? theme.colors.primary : theme.colors.border,
-              paddingVertical: 10,
-              paddingHorizontal: 16,
-              borderRadius: 8,
-              alignItems: "center",
-              opacity: pressed ? 0.7 : 1,
-            })}
+            activeOpacity={0.7}
+            style={{
+              borderRadius: 10,
+              overflow: "hidden",
+              shadowColor: canUpgrade ? theme.colors.primary : "transparent",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: canUpgrade ? 3 : 0,
+            }}
           >
-            <Text
-              style={{
-                color: canUpgrade ? "#FFFFFF" : theme.colors.textSecondary,
-                fontSize: 14,
-                fontWeight: "600",
-              }}
-            >
-              {canUpgrade ? "Upgrade" : planet.constructionQueue ? "Building..." : "Insufficient Resources"}
-            </Text>
-          </Pressable>
+            {canUpgrade ? (
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontSize: 15,
+                    fontWeight: "700",
+                  }}
+                >
+                  Upgrade to Level {currentLevel + 1}
+                </Text>
+              </LinearGradient>
+            ) : (
+              <View
+                style={{
+                  backgroundColor: theme.colors.border,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  {planet.constructionQueue ? "Building..." : "Insufficient Resources"}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </>
       )}
     </View>

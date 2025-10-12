@@ -1,7 +1,7 @@
 // PlanetSelector component - horizontal scrollable planet switcher
 
 import React from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
@@ -34,20 +34,20 @@ export default function PlanetSelector() {
         {planets.map((planet) => {
           const isSelected = planet.id === selectedPlanetId;
           return (
-            <Pressable
+            <TouchableOpacity
               key={planet.id}
               onPress={() => handleSelectPlanet(planet.id)}
-              style={({ pressed }) => ({
+              activeOpacity={0.7}
+              style={{
                 backgroundColor: isSelected ? theme.colors.primary : theme.colors.inputBackground,
                 paddingVertical: 10,
                 paddingHorizontal: 16,
                 borderRadius: 20,
                 marginHorizontal: 4,
                 minWidth: 120,
-                opacity: pressed ? 0.7 : 1,
                 borderWidth: 1,
                 borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-              })}
+              }}
             >
               <Text
                 style={{
@@ -79,7 +79,7 @@ export default function PlanetSelector() {
               >
                 {formatNumber(planet.resources.metal + planet.resources.crystal + planet.resources.deuterium)} resources
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
