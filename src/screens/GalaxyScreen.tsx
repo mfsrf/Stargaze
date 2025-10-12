@@ -1,26 +1,349 @@
 // GalaxyScreen - explore and interact with the universe
 
-import React from "react";
-import { View, Text } from "react-native";
+import React, { useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import useThemeStore from "../state/themeStore";
+import useGameStore from "../state/gameStore";
+import { generateSystemView } from "../utils/galaxyManager";
+import { formatNumber } from "../utils/gameFormulas";
 
 export default function GalaxyScreen() {
   const theme = useThemeStore((state) => state.theme);
+  const playerPlanets = useGameStore((state) => state.player.planets);
+  const aiPlayers = useGameStore((state) => state.aiPlayers);
+  
+  const [selectedGalaxy, setSelectedGalaxy] = useState(1);
+  const [selectedSystem, setSelectedSystem] = useState(1);
+  
+  // Get all AI planets
+  const aiPlanets = aiPlayers.flatMap((ai) => ai.planets);
+  
+  // Generate system view
+  const systemPositions = generateSystemView(
+    selectedGalaxy,
+    selectedSystem,
+    playerPlanets,
+    aiPlanets
+  );
+  
+  const handleGalaxyChange = (direction: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedGalaxy((prev) => {
+      const newGalaxy = prev + direction;
+      if (newGalaxy < 1) return 5;
+      if (newGalaxy > 5) return 1;
+      return newGalaxy;
+    });
+  };
+  
+  const handleSystemChange = (direction: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedSystem((prev) => {
+      const newSystem = prev + direction;
+      if (newSystem < 1) return 100;
+      if (newSystem > 100) return 1;
+      return newSystem;
+    });
+  };
   
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={["top"]}>
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "bold", marginBottom: 12 }}>
-          Galaxy View
+      {/* Header */}
+      <View
+        style={{
+          backgroundColor: theme.colors.card,
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+          Galaxy Explorer
         </Text>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: 16, textAlign: "center" }}>
-          Explore the galaxy, find new planets to colonize, and scout enemy positions.
-        </Text>
-        <Text style={{ color: theme.colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 20 }}>
-          Coming soon in the next update!
-        </Text>
+        
+        {/* Galaxy Selector */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 14, width: 60 }}>
+            Galaxy:
+          </Text>
+          <TouchableOpacity
+            onPress={() => handleGalaxyChange(-1)}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.inputBackground,
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <View
+            style={{
+              backgroundColor: theme.colors.primary + "20",
+              paddingVertical: 8,
+              paddingHorizontal: 20,
+              marginHorizontal: 8,
+              borderRadius: 8,
+              minWidth: 80,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: theme.colors.primary, fontSize: 18, fontWeight: "bold" }}>
+              {selectedGalaxy}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleGalaxyChange(1)}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.inputBackground,
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* System Selector */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 14, width: 60 }}>
+            System:
+          </Text>
+          <TouchableOpacity
+            onPress={() => handleSystemChange(-1)}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.inputBackground,
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <Ionicons name="chevron-back" size={20} color={theme.colors.secondary} />
+          </TouchableOpacity>
+          <View
+            style={{
+              backgroundColor: theme.colors.secondary + "20",
+              paddingVertical: 8,
+              paddingHorizontal: 20,
+              marginHorizontal: 8,
+              borderRadius: 8,
+              minWidth: 80,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: theme.colors.secondary, fontSize: 18, fontWeight: "bold" }}>
+              {selectedSystem}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleSystemChange(1)}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.inputBackground,
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.secondary} />
+          </TouchableOpacity>
+        </View>
       </View>
+      
+      {/* System View */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16 }}
+      >
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 12 }}>
+          System [{selectedGalaxy}:{selectedSystem}]
+        </Text>
+        
+        {systemPositions.map((position) => {
+          const isPlayerPlanet = position.ownerId === "player";
+          const isOccupied = position.planet !== null;
+          
+          return (
+            <View
+              key={`${position.coordinates.galaxy}-${position.coordinates.system}-${position.coordinates.position}`}
+              style={{
+                backgroundColor: theme.colors.card,
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 10,
+                borderWidth: 1,
+                borderColor: isPlayerPlanet
+                  ? theme.colors.success
+                  : isOccupied
+                  ? theme.colors.danger
+                  : theme.colors.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: isPlayerPlanet
+                        ? theme.colors.success + "20"
+                        : isOccupied
+                        ? theme.colors.danger + "20"
+                        : theme.colors.border,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <Ionicons
+                      name={isOccupied ? "planet" : "ellipse-outline"}
+                      size={24}
+                      color={
+                        isPlayerPlanet
+                          ? theme.colors.success
+                          : isOccupied
+                          ? theme.colors.danger
+                          : theme.colors.textSecondary
+                      }
+                    />
+                  </View>
+                  
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                      Position {position.coordinates.position}
+                    </Text>
+                    {isOccupied ? (
+                      <>
+                        <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                          {position.planet?.name}
+                        </Text>
+                        <Text
+                          style={{
+                            color: isPlayerPlanet ? theme.colors.success : theme.colors.danger,
+                            fontSize: 11,
+                            marginTop: 2,
+                          }}
+                        >
+                          {position.playerName} • {position.planet?.maxFields} fields
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                        Empty position
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                
+                {/* Action Buttons */}
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {isOccupied && !isPlayerPlanet && (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.danger + "20",
+                        padding: 8,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Ionicons name="rocket" size={18} color={theme.colors.danger} />
+                    </TouchableOpacity>
+                  )}
+                  {!isOccupied && (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.success + "20",
+                        padding: 8,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Ionicons name="add-circle" size={18} color={theme.colors.success} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+              
+              {/* Resources preview for player planets */}
+              {isPlayerPlanet && position.planet && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    marginTop: 10,
+                    paddingTop: 10,
+                    borderTopWidth: 1,
+                    borderTopColor: theme.colors.border,
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="hammer" size={12} color={theme.colors.metal} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginLeft: 4 }}>
+                      {formatNumber(position.planet.resources.metal)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="diamond" size={12} color={theme.colors.crystal} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginLeft: 4 }}>
+                      {formatNumber(position.planet.resources.crystal)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="water" size={12} color={theme.colors.deuterium} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginLeft: 4 }}>
+                      {formatNumber(position.planet.resources.deuterium)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          );
+        })}
+        
+        {/* Quick navigation to player planets */}
+        <View style={{ marginTop: 20 }}>
+          <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "bold", marginBottom: 12 }}>
+            Your Planets
+          </Text>
+          {playerPlanets.map((planet) => (
+            <TouchableOpacity
+              key={planet.id}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedGalaxy(planet.coordinates.galaxy);
+                setSelectedSystem(planet.coordinates.system);
+              }}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: theme.colors.card,
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderWidth: 1,
+                borderColor: theme.colors.success,
+              }}
+            >
+              <View>
+                <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                  {planet.name}
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                  [{planet.coordinates.galaxy}:{planet.coordinates.system}:{planet.coordinates.position}]
+                </Text>
+              </View>
+              <Ionicons name="navigate" size={20} color={theme.colors.success} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

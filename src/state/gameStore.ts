@@ -48,6 +48,7 @@ interface GameStore extends GameState {
   
   // Resource management
   updateResources: () => void;
+  addResourcesToPlanet: (planetId: string, amount: number) => void;
   
   // Building management
   upgradeBuilding: (planetId: string, buildingType: BuildingType) => boolean;
@@ -550,6 +551,32 @@ const useGameStore = create<GameStore>()(
           settings: {
             ...state.settings,
             ...settings,
+          },
+        });
+      },
+      
+      // Add resources to planet (cheat for testing)
+      addResourcesToPlanet: (planetId: string, amount: number) => {
+        const state = get();
+        const updatedPlanets = state.player.planets.map((planet) => {
+          if (planet.id === planetId) {
+            return {
+              ...planet,
+              resources: {
+                ...planet.resources,
+                metal: planet.resources.metal + amount,
+                crystal: planet.resources.crystal + amount,
+                deuterium: planet.resources.deuterium + amount,
+              },
+            };
+          }
+          return planet;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
           },
         });
       },

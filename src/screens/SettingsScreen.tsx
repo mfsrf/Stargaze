@@ -15,6 +15,15 @@ export default function SettingsScreen() {
   const resourceMultiplier = useGameStore((state) => state.settings.resourceMultiplier);
   const instantBuild = useGameStore((state) => state.settings.instantBuild);
   const updateSettings = useGameStore((state) => state.updateSettings);
+  const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
+  const addResourcesToPlanet = useGameStore((state) => state.addResourcesToPlanet);
+  
+  const handleAddResources = () => {
+    if (selectedPlanetId) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      addResourcesToPlanet(selectedPlanetId, 1000);
+    }
+  };
   
   const handleResetGame = () => {
     Alert.alert(
@@ -178,6 +187,57 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+        
+        {/* Testing Tools */}
+        <View
+          style={{
+            backgroundColor: theme.colors.card,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+            <Ionicons
+              name="construct"
+              size={24}
+              color={theme.colors.warning}
+              style={{ marginRight: 12 }}
+            />
+            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600" }}>
+              Testing Tools
+            </Text>
+          </View>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
+            Quick actions for testing gameplay features
+          </Text>
+          <TouchableOpacity
+            onPress={handleAddResources}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.success,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: theme.colors.success,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <Ionicons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+              Add +1000 Resources
+            </Text>
+          </TouchableOpacity>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginTop: 8, textAlign: "center" }}>
+            Adds 1000 metal, crystal, and deuterium to selected planet
+          </Text>
         </View>
         
         {/* Game Info */}
