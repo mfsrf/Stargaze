@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 import {
   GameState,
   Player,
+  AIPlayer,
+  AIDifficulty,
   Planet,
   Resources,
   BuildingType,
@@ -172,9 +174,98 @@ const useGameStore = create<GameStore>()(
           militaryPoints: 0,
         };
         
+        // Create AI players
+        const aiPlayers: AIPlayer[] = [];
+        const aiNames = [
+          "Emperor Xarok",
+          "Queen Zarena",
+          "Commander Vex",
+          "Lord Kryton",
+          "Admiral Nexus",
+        ];
+        const strategies: Array<"defensive" | "balanced" | "aggressive"> = ["defensive", "balanced", "aggressive"];
+        
+        const allPlanets = [startingPlanet]; // Track all planets to avoid collisions
+        
+        for (let i = 0; i < aiCount; i++) {
+          const aiId = uuidv4();
+          
+          // Create AI starting planet in a different location
+          let aiCoordinates: Coordinates;
+          let attempts = 0;
+          do {
+            aiCoordinates = {
+              galaxy: Math.floor(Math.random() * GALAXY_CONFIG.galaxies) + 1,
+              system: Math.floor(Math.random() * GALAXY_CONFIG.systems) + 1,
+              position: [4, 6, 8, 10, 12][Math.floor(Math.random() * 5)],
+            };
+            attempts++;
+          } while (
+            attempts < 50 &&
+            allPlanets.some(
+              (p) =>
+                p.coordinates.galaxy === aiCoordinates.galaxy &&
+                p.coordinates.system === aiCoordinates.system &&
+                p.coordinates.position === aiCoordinates.position
+            )
+          );
+          
+          const aiPlanet = createInitialPlanet(
+            `${aiNames[i]} Base`,
+            aiCoordinates,
+            true
+          );
+          
+          allPlanets.push(aiPlanet);
+          
+          // Determine difficulty and give AI advantages
+          const difficulty =
+            aiCount === 3
+              ? "easy"
+              : aiCount === 4
+              ? "medium"
+              : "hard";
+          
+          // Give AI some starting resources based on difficulty
+          const resourceMultiplier = difficulty === "easy" ? 1.2 : difficulty === "medium" ? 1.5 : 2;
+          aiPlanet.resources = {
+            metal: STARTING_RESOURCES.metal * resourceMultiplier,
+            crystal: STARTING_RESOURCES.crystal * resourceMultiplier,
+            deuterium: STARTING_RESOURCES.deuterium * resourceMultiplier,
+            energy: 0,
+          };
+          
+          // Give AI some starting buildings based on difficulty
+          if (difficulty === "medium" || difficulty === "hard") {
+            aiPlanet.buildings[BuildingType.MetalMine] = 2;
+            aiPlanet.buildings[BuildingType.CrystalMine] = 2;
+            aiPlanet.buildings[BuildingType.SolarPlant] = 2;
+          }
+          if (difficulty === "hard") {
+            aiPlanet.buildings[BuildingType.MetalMine] = 3;
+            aiPlanet.buildings[BuildingType.CrystalMine] = 3;
+            aiPlanet.buildings[BuildingType.SolarPlant] = 3;
+            aiPlanet.buildings[BuildingType.RoboticsFactory] = 1;
+          }
+          
+          const aiPlayer: AIPlayer = {
+            id: aiId,
+            name: aiNames[i],
+            difficulty: difficulty as AIDifficulty,
+            planets: [aiPlanet],
+            technologies: { ...INITIAL_TECHNOLOGIES },
+            fleets: [],
+            lastActionTime: Date.now(),
+            strategy: strategies[i % strategies.length],
+            targetPlayer: undefined,
+          };
+          
+          aiPlayers.push(aiPlayer);
+        }
+        
         set({
           player,
-          aiPlayers: [], // AI players will be initialized separately
+          aiPlayers,
           selectedPlanetId: startingPlanet.id,
           initialized: true,
           gameStartTime: Date.now(),
