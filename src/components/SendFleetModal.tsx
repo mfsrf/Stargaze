@@ -14,9 +14,10 @@ interface SendFleetModalProps {
   visible: boolean;
   onClose: () => void;
   planetId: string;
+  targetCoordinates?: Coordinates;
 }
 
-export default function SendFleetModal({ visible, onClose, planetId }: SendFleetModalProps) {
+export default function SendFleetModal({ visible, onClose, planetId, targetCoordinates }: SendFleetModalProps) {
   const theme = useThemeStore((state) => state.theme);
   const planets = useGameStore((state) => state.player.planets);
   const sendFleet = useGameStore((state) => state.sendFleet);
@@ -24,9 +25,9 @@ export default function SendFleetModal({ visible, onClose, planetId }: SendFleet
   const planet = planets.find((p) => p.id === planetId);
   
   const [selectedMission, setSelectedMission] = useState<MissionType>(MissionType.Attack);
-  const [targetGalaxy, setTargetGalaxy] = useState("1");
-  const [targetSystem, setTargetSystem] = useState("1");
-  const [targetPosition, setTargetPosition] = useState("1");
+  const [targetGalaxy, setTargetGalaxy] = useState(targetCoordinates?.galaxy.toString() || "1");
+  const [targetSystem, setTargetSystem] = useState(targetCoordinates?.system.toString() || "1");
+  const [targetPosition, setTargetPosition] = useState(targetCoordinates?.position.toString() || "1");
   const [selectedShips, setSelectedShips] = useState<Partial<FleetComposition>>({});
   
   if (!planet) return null;

@@ -8,6 +8,7 @@ import * as Haptics from "expo-haptics";
 import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
 import PlanetDetailModal from "../components/PlanetDetailModal";
+import SendFleetModal from "../components/SendFleetModal";
 import { Planet, ShipType, Coordinates } from "../types/game";
 import { generateSystemView, getPlanetTypeColor } from "../utils/galaxyManager";
 import { formatNumber } from "../utils/gameFormulas";
@@ -26,6 +27,8 @@ export default function GalaxyScreen() {
   const [isPlanetModalVisible, setIsPlanetModalVisible] = useState(false);
   const [colonizeModalVisible, setColonizeModalVisible] = useState(false);
   const [colonizeTarget, setColonizeTarget] = useState<Coordinates | null>(null);
+  const [attackModalVisible, setAttackModalVisible] = useState(false);
+  const [attackTargetCoords, setAttackTargetCoords] = useState<Coordinates | null>(null);
   
   // Get all AI planets
   const aiPlanets = aiPlayers.flatMap((ai) => ai.planets);
@@ -101,6 +104,15 @@ export default function GalaxyScreen() {
     }
   };
   
+  const handleAttackClick = (targetCoords: Coordinates) => {
+    // Use first player planet as default source
+    if (playerPlanets.length === 0) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAttackTargetCoords(targetCoords);
+    setAttackModalVisible(true);
+  };
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={["top"]}>
       {/* Planet Detail Modal */}
@@ -110,6 +122,19 @@ export default function GalaxyScreen() {
         onClose={() => setIsPlanetModalVisible(false)}
         isPlayerPlanet={selectedPlanet ? playerPlanets.some(p => p.id === selectedPlanet.id) : false}
       />
+      
+      {/* Send Fleet / Attack Modal */}
+      {playerPlanets.length > 0 && attackTargetCoords && (
+        <SendFleetModal
+          visible={attackModalVisible}
+          onClose={() => {
+            setAttackModalVisible(false);
+            setAttackTargetCoords(null);
+          }}
+          planetId={playerPlanets[0].id}
+          targetCoordinates={attackTargetCoords}
+        />
+      )}
       
       {/* Colonize Confirmation Modal */}
       <Modal
@@ -476,6 +501,10 @@ export default function GalaxyScreen() {
                 <View style={{ flexDirection: "row", gap: 8 }}>
                   {isOccupied && !isPlayerPlanet && (
                     <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleAttackClick(position.coordinates);
+                      }}
                       activeOpacity={0.7}
                       style={{
                         backgroundColor: theme.colors.danger + "20",
@@ -649,8 +678,7 @@ export default function GalaxyScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        // TODO: Open attack modal
+                        handleAttackClick(planet.coordinates);
                       }}
                       activeOpacity={0.7}
                       style={{

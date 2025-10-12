@@ -79,6 +79,7 @@ interface GameStore extends GameState {
   
   // Planet management
   colonizePlanet: (coordinates: Coordinates) => boolean;
+  renamePlanet: (planetId: string, newName: string) => void;
   selectPlanet: (planetId: string) => void;
   
   // Message management
@@ -659,6 +660,24 @@ const useGameStore = create<GameStore>()(
         });
         
         return true;
+      },
+      
+      // Rename planet
+      renamePlanet: (planetId: string, newName: string) => {
+        const state = get();
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planetId) {
+            return { ...p, name: newName };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
       },
       
       // Select planet
