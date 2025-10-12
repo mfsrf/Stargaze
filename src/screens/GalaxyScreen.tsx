@@ -7,7 +7,9 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
-import { generateSystemView } from "../utils/galaxyManager";
+import PlanetDetailModal from "../components/PlanetDetailModal";
+import { Planet } from "../types/game";
+import { generateSystemView, getPlanetTypeColor } from "../utils/galaxyManager";
 import { formatNumber } from "../utils/gameFormulas";
 
 export default function GalaxyScreen() {
@@ -19,6 +21,8 @@ export default function GalaxyScreen() {
   const firstPlanet = playerPlanets[0];
   const [selectedGalaxy, setSelectedGalaxy] = useState(firstPlanet?.coordinates.galaxy || 1);
   const [selectedSystem, setSelectedSystem] = useState(firstPlanet?.coordinates.system || 1);
+  const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null);
+  const [isPlanetModalVisible, setIsPlanetModalVisible] = useState(false);
   
   // Get all AI planets
   const aiPlanets = aiPlayers.flatMap((ai) => ai.planets);
@@ -51,8 +55,22 @@ export default function GalaxyScreen() {
     });
   };
   
+  const handlePlanetClick = (planet: Planet, isPlayer: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedPlanet(planet);
+    setIsPlanetModalVisible(true);
+  };
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={["top"]}>
+      {/* Planet Detail Modal */}
+      <PlanetDetailModal
+        visible={isPlanetModalVisible}
+        planet={selectedPlanet}
+        onClose={() => setIsPlanetModalVisible(false)}
+        isPlayerPlanet={selectedPlanet ? playerPlanets.some(p => p.id === selectedPlanet.id) : false}
+      />
+      
       {/* Header */}
       <View
         style={{
@@ -168,10 +186,18 @@ export default function GalaxyScreen() {
         {systemPositions.map((position) => {
           const isPlayerPlanet = position.ownerId === "player";
           const isOccupied = position.planet !== null;
+          const planetTypeColor = isOccupied && position.planet ? getPlanetTypeColor(position.planet.type) : theme.colors.textSecondary;
           
           return (
-            <View
+            <TouchableOpacity
               key={`${position.coordinates.galaxy}-${position.coordinates.system}-${position.coordinates.position}`}
+              onPress={() => {
+                if (isOccupied && position.planet) {
+                  handlePlanetClick(position.planet, isPlayerPlanet);
+                }
+              }}
+              disabled={!isOccupied}
+              activeOpacity={0.7}
               style={{
                 backgroundColor: theme.colors.card,
                 borderRadius: 12,
@@ -181,7 +207,7 @@ export default function GalaxyScreen() {
                 borderColor: isPlayerPlanet
                   ? theme.colors.success
                   : isOccupied
-                  ? theme.colors.danger
+                  ? planetTypeColor
                   : theme.colors.border,
               }}
             >
@@ -192,11 +218,7 @@ export default function GalaxyScreen() {
                       width: 40,
                       height: 40,
                       borderRadius: 20,
-                      backgroundColor: isPlayerPlanet
-                        ? theme.colors.success + "20"
-                        : isOccupied
-                        ? theme.colors.danger + "20"
-                        : theme.colors.border,
+                      backgroundColor: isOccupied ? planetTypeColor + "30" : theme.colors.border,
                       alignItems: "center",
                       justifyContent: "center",
                       marginRight: 12,
@@ -205,13 +227,7 @@ export default function GalaxyScreen() {
                     <Ionicons
                       name={isOccupied ? "planet" : "ellipse-outline"}
                       size={24}
-                      color={
-                        isPlayerPlanet
-                          ? theme.colors.success
-                          : isOccupied
-                          ? theme.colors.danger
-                          : theme.colors.textSecondary
-                      }
+                      color={isOccupied ? planetTypeColor : theme.colors.textSecondary}
                     />
                   </View>
                   
@@ -303,7 +319,7 @@ export default function GalaxyScreen() {
                   </View>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         })}
         

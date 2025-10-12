@@ -18,6 +18,7 @@ import {
   ShipType,
   MissionType,
   GameSettings,
+  PlanetType,
 } from "../types/game";
 import {
   STARTING_RESOURCES,
@@ -40,6 +41,7 @@ import {
   deductCost,
   calculateUsedFields,
 } from "../utils/gameFormulas";
+import { getPlanetType, calculateTemperature } from "../utils/galaxyManager";
 
 interface GameStore extends GameState {
   // Game initialization
@@ -94,10 +96,15 @@ const createInitialPlanet = (
   coordinates: Coordinates,
   isStarting: boolean
 ): Planet => {
+  const planetType = getPlanetType(coordinates.position);
+  const temperature = calculateTemperature(coordinates.position);
+  
   return {
     id: uuidv4(),
     name,
     coordinates,
+    type: planetType,
+    temperature,
     resources: isStarting ? { ...STARTING_RESOURCES } : { metal: 0, crystal: 0, deuterium: 0, energy: 0 },
     buildings: { ...INITIAL_BUILDINGS },
     defense: { ...INITIAL_DEFENSE },

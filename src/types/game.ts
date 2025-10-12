@@ -156,10 +156,20 @@ export interface ResearchQueue {
   endTime: number;
 }
 
+export enum PlanetType {
+  Frozen = "frozen",        // Positions 1-3
+  Desert = "desert",        // Positions 4-6
+  Jungle = "jungle",        // Positions 7-9
+  Normal = "normal",        // Positions 10-12
+  Water = "water",          // Positions 13-15
+}
+
 export interface Planet {
   id: string;
   name: string;
   coordinates: Coordinates;
+  type: PlanetType;
+  temperature: number;
   resources: Resources;
   buildings: BuildingLevels;
   defense: DefenseComposition;
