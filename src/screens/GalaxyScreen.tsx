@@ -1,14 +1,14 @@
 // GalaxyScreen - explore and interact with the universe
 
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
 import PlanetDetailModal from "../components/PlanetDetailModal";
-import { Planet } from "../types/game";
+import { Planet, ShipType, Coordinates } from "../types/game";
 import { generateSystemView, getPlanetTypeColor } from "../utils/galaxyManager";
 import { formatNumber } from "../utils/gameFormulas";
 
@@ -16,6 +16,7 @@ export default function GalaxyScreen() {
   const theme = useThemeStore((state) => state.theme);
   const playerPlanets = useGameStore((state) => state.player.planets);
   const aiPlayers = useGameStore((state) => state.aiPlayers);
+  const colonizePlanet = useGameStore((state) => state.colonizePlanet);
   
   // Start at first player planet location
   const firstPlanet = playerPlanets[0];
@@ -23,9 +24,14 @@ export default function GalaxyScreen() {
   const [selectedSystem, setSelectedSystem] = useState(firstPlanet?.coordinates.system || 1);
   const [selectedPlanet, setSelectedPlanet] = useState<Planet | null>(null);
   const [isPlanetModalVisible, setIsPlanetModalVisible] = useState(false);
+  const [colonizeModalVisible, setColonizeModalVisible] = useState(false);
+  const [colonizeTarget, setColonizeTarget] = useState<Coordinates | null>(null);
   
   // Get all AI planets
   const aiPlanets = aiPlayers.flatMap((ai) => ai.planets);
+  
+  // Check if player has colony ship
+  const hasColonyShip = playerPlanets.some((p) => p.fleet[ShipType.ColonyShip] > 0);
   
   // Generate system view
   const systemPositions = generateSystemView(
@@ -70,6 +76,31 @@ export default function GalaxyScreen() {
     setSelectedSystem(randomEnemy.coordinates.system);
   };
   
+  const handleColonizeClick = (coordinates: Coordinates) => {
+    if (!hasColonyShip) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setColonizeTarget(coordinates);
+    setColonizeModalVisible(true);
+  };
+  
+  const handleConfirmColonize = () => {
+    if (!colonizeTarget) return;
+    
+    const success = colonizePlanet(colonizeTarget);
+    
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setColonizeModalVisible(false);
+      setColonizeTarget(null);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={["top"]}>
       {/* Planet Detail Modal */}
@@ -79,6 +110,120 @@ export default function GalaxyScreen() {
         onClose={() => setIsPlanetModalVisible(false)}
         isPlayerPlanet={selectedPlanet ? playerPlanets.some(p => p.id === selectedPlanet.id) : false}
       />
+      
+      {/* Colonize Confirmation Modal */}
+      <Modal
+        visible={colonizeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setColonizeModalVisible(false)}
+      >
+        <View style={{ 
+          flex: 1, 
+          backgroundColor: "rgba(0,0,0,0.7)", 
+          justifyContent: "center", 
+          alignItems: "center",
+          padding: 20,
+        }}>
+          <View style={{ 
+            backgroundColor: theme.colors.card, 
+            borderRadius: 16, 
+            padding: 24,
+            width: "100%",
+            maxWidth: 400,
+          }}>
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <View style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: theme.colors.success + "20",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 12,
+              }}>
+                <Ionicons name="planet" size={32} color={theme.colors.success} />
+              </View>
+              <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "bold" }}>
+                Colonize Planet?
+              </Text>
+            </View>
+            
+            {colonizeTarget && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 14, textAlign: "center", marginBottom: 12 }}>
+                  Colonize position [{colonizeTarget.galaxy}:{colonizeTarget.system}:{colonizeTarget.position}]
+                </Text>
+                <View style={{
+                  backgroundColor: theme.colors.background,
+                  padding: 12,
+                  borderRadius: 8,
+                  marginBottom: 12,
+                }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                    <Ionicons name="information-circle" size={16} color={theme.colors.primary} />
+                    <Text style={{ color: theme.colors.text, fontSize: 13, fontWeight: "600", marginLeft: 8 }}>
+                      Colonization Cost:
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="rocket" size={14} color={theme.colors.textSecondary} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginLeft: 6 }}>
+                      1 Colony Ship (will be consumed)
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center", lineHeight: 16 }}>
+                  A new colony will be established with basic infrastructure. The colony ship will be consumed in the process.
+                </Text>
+              </View>
+            )}
+            
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setColonizeModalVisible(false);
+                  setColonizeTarget(null);
+                }}
+                activeOpacity={0.7}
+                style={{
+                  flex: 1,
+                  backgroundColor: theme.colors.border,
+                  paddingVertical: 14,
+                  borderRadius: 10,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: "600" }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={handleConfirmColonize}
+                activeOpacity={0.7}
+                style={{
+                  flex: 1,
+                  backgroundColor: theme.colors.success,
+                  paddingVertical: 14,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  shadowColor: theme.colors.success,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                  Colonize
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       {/* Header */}
       <View
@@ -93,6 +238,43 @@ export default function GalaxyScreen() {
         <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
           Galaxy Explorer
         </Text>
+        
+        {/* Colony Ship Status */}
+        {hasColonyShip ? (
+          <View style={{
+            backgroundColor: theme.colors.success + "20",
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.success + "40",
+          }}>
+            <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} style={{ marginRight: 8 }} />
+            <Text style={{ color: theme.colors.success, fontSize: 13, fontWeight: "600", flex: 1 }}>
+              Colony Ship Available - Click empty positions to colonize
+            </Text>
+          </View>
+        ) : (
+          <View style={{
+            backgroundColor: theme.colors.warning + "20",
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: theme.colors.warning + "40",
+          }}>
+            <Ionicons name="alert-circle" size={18} color={theme.colors.warning} style={{ marginRight: 8 }} />
+            <Text style={{ color: theme.colors.warning, fontSize: 13, fontWeight: "600", flex: 1 }}>
+              Build a Colony Ship to colonize new planets
+            </Text>
+          </View>
+        )}
         
         {/* Find Random Enemy Button */}
         {aiPlanets.length > 0 && (
@@ -306,14 +488,24 @@ export default function GalaxyScreen() {
                   )}
                   {!isOccupied && (
                     <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleColonizeClick(position.coordinates);
+                      }}
+                      disabled={!hasColonyShip}
                       activeOpacity={0.7}
                       style={{
-                        backgroundColor: theme.colors.success + "20",
+                        backgroundColor: hasColonyShip ? theme.colors.success + "20" : theme.colors.border,
                         padding: 8,
                         borderRadius: 8,
+                        opacity: hasColonyShip ? 1 : 0.5,
                       }}
                     >
-                      <Ionicons name="add-circle" size={18} color={theme.colors.success} />
+                      <Ionicons 
+                        name={hasColonyShip ? "add-circle" : "lock-closed"} 
+                        size={18} 
+                        color={hasColonyShip ? theme.colors.success : theme.colors.textSecondary} 
+                      />
                     </TouchableOpacity>
                   )}
                 </View>
