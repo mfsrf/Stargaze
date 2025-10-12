@@ -7,8 +7,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
-import { DefenseType } from "../types/game";
-import { canAfford, formatNumber } from "../utils/gameFormulas";
+import { DefenseType, TechnologyType } from "../types/game";
+import { 
+  canAfford, 
+  formatNumber,
+  calculateAttackPower,
+  calculateShieldPower,
+  calculateArmorPower,
+} from "../utils/gameFormulas";
 import { DEFENSE_BASE_COSTS, DEFENSE_NAMES, DEFENSE_STATS } from "../utils/gameConstants";
 
 interface DefenseCardProps {
@@ -43,14 +49,27 @@ export default function DefenseCard({ defenseType, planetId }: DefenseCardProps)
   const planet = useGameStore((state) =>
     state.player.planets.find((p) => p.id === planetId)
   );
+  const technologies = useGameStore((state) => state.player.technologies);
   const buildDefense = useGameStore((state) => state.buildDefense);
   const [quantity, setQuantity] = useState("1");
   
   if (!planet) return null;
   
   const cost = DEFENSE_BASE_COSTS[defenseType];
-  const stats = DEFENSE_STATS[defenseType];
+  const baseStats = DEFENSE_STATS[defenseType];
   const currentCount = planet.defense[defenseType] || 0;
+  
+  // Calculate stats with technology bonuses
+  const stats = {
+    attack: calculateAttackPower(baseStats.attack, technologies[TechnologyType.WeaponsTech]),
+    shield: calculateShieldPower(baseStats.shield, technologies[TechnologyType.ShieldingTech]),
+    armor: calculateArmorPower(baseStats.armor, technologies[TechnologyType.ArmorTech]),
+  };
+  
+  // Check if any bonuses are active
+  const hasWeaponsBonus = technologies[TechnologyType.WeaponsTech] > 0;
+  const hasShieldBonus = technologies[TechnologyType.ShieldingTech] > 0;
+  const hasArmorBonus = technologies[TechnologyType.ArmorTech] > 0;
   
   const quantityNum = parseInt(quantity) || 0;
   const totalCost = {
@@ -154,21 +173,21 @@ export default function DefenseCard({ defenseType, planetId }: DefenseCardProps)
           <View style={{ alignItems: "center" }}>
             <Ionicons name="flash" size={14} color={theme.colors.danger} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Attack</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasWeaponsBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.attack)}
             </Text>
           </View>
           <View style={{ alignItems: "center" }}>
             <Ionicons name="shield" size={14} color={theme.colors.primary} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Shield</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasShieldBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.shield)}
             </Text>
           </View>
           <View style={{ alignItems: "center" }}>
             <Ionicons name="fitness" size={14} color={theme.colors.crystal} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Armor</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasArmorBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.armor)}
             </Text>
           </View>

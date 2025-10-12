@@ -381,3 +381,45 @@ export function formatDuration(seconds: number): string {
     return `${secs}s`;
   }
 }
+
+/**
+ * Calculate technology bonus (10% per level)
+ */
+export function calculateTechnologyBonus(techLevel: number): number {
+  return 1 + (techLevel * 0.1);
+}
+
+/**
+ * Calculate ship speed with drive technology bonus
+ */
+export function calculateShipSpeed(
+  baseSpeed: number,
+  combustionLevel: number,
+  impulseLevel: number,
+  hyperspaceLeve: number
+): number {
+  // Use the highest applicable drive technology
+  const maxDriveLevel = Math.max(combustionLevel, impulseLevel, hyperspaceLeve);
+  return Math.floor(baseSpeed * calculateTechnologyBonus(maxDriveLevel));
+}
+
+/**
+ * Calculate ship/defense attack with weapons technology bonus
+ */
+export function calculateAttackPower(baseAttack: number, weaponsLevel: number): number {
+  return Math.floor(baseAttack * calculateTechnologyBonus(weaponsLevel));
+}
+
+/**
+ * Calculate ship/defense shield with shielding technology bonus
+ */
+export function calculateShieldPower(baseShield: number, shieldingLevel: number): number {
+  return Math.floor(baseShield * calculateTechnologyBonus(shieldingLevel));
+}
+
+/**
+ * Calculate ship/defense armor with armor technology bonus
+ */
+export function calculateArmorPower(baseArmor: number, armorLevel: number): number {
+  return Math.floor(baseArmor * calculateTechnologyBonus(armorLevel));
+}

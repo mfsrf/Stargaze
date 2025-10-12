@@ -7,10 +7,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
-import { ShipType } from "../types/game";
+import { ShipType, TechnologyType } from "../types/game";
 import {
   canAfford,
   formatNumber,
+  calculateShipSpeed,
+  calculateAttackPower,
+  calculateShieldPower,
+  calculateArmorPower,
 } from "../utils/gameFormulas";
 import { SHIP_BASE_COSTS, SHIP_NAMES, SHIP_STATS } from "../utils/gameConstants";
 
@@ -72,15 +76,39 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
   const planet = useGameStore((state) =>
     state.player.planets.find((p) => p.id === planetId)
   );
+  const technologies = useGameStore((state) => state.player.technologies);
   const buildShips = useGameStore((state) => state.buildShips);
   const [quantity, setQuantity] = useState("1");
   
   if (!planet) return null;
   
   const cost = SHIP_BASE_COSTS[shipType];
-  const stats = SHIP_STATS[shipType];
+  const baseStats = SHIP_STATS[shipType];
   const currentCount = planet.fleet[shipType] || 0;
   const category = SHIP_CATEGORIES[shipType];
+  
+  // Calculate stats with technology bonuses
+  const stats = {
+    attack: calculateAttackPower(baseStats.attack, technologies[TechnologyType.WeaponsTech]),
+    shield: calculateShieldPower(baseStats.shield, technologies[TechnologyType.ShieldingTech]),
+    armor: calculateArmorPower(baseStats.armor, technologies[TechnologyType.ArmorTech]),
+    speed: calculateShipSpeed(
+      baseStats.speed,
+      technologies[TechnologyType.CombustionDrive],
+      technologies[TechnologyType.ImpulseDrive],
+      technologies[TechnologyType.HyperspaceDrive]
+    ),
+    cargo: baseStats.cargo,
+    fuelConsumption: baseStats.fuelConsumption,
+  };
+  
+  // Check if any bonuses are active
+  const hasWeaponsBonus = technologies[TechnologyType.WeaponsTech] > 0;
+  const hasShieldBonus = technologies[TechnologyType.ShieldingTech] > 0;
+  const hasArmorBonus = technologies[TechnologyType.ArmorTech] > 0;
+  const hasDriveBonus = technologies[TechnologyType.CombustionDrive] > 0 || 
+                        technologies[TechnologyType.ImpulseDrive] > 0 || 
+                        technologies[TechnologyType.HyperspaceDrive] > 0;
   
   const quantityNum = parseInt(quantity) || 0;
   const totalCost = {
@@ -182,21 +210,21 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
           <View style={{ alignItems: "center" }}>
             <Ionicons name="flash" size={14} color={theme.colors.danger} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Attack</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasWeaponsBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.attack)}
             </Text>
           </View>
           <View style={{ alignItems: "center" }}>
             <Ionicons name="shield" size={14} color={theme.colors.primary} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Shield</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasShieldBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.shield)}
             </Text>
           </View>
           <View style={{ alignItems: "center" }}>
             <Ionicons name="fitness" size={14} color={theme.colors.crystal} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Armor</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasArmorBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.armor)}
             </Text>
           </View>
@@ -205,7 +233,7 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
           <View style={{ alignItems: "center" }}>
             <Ionicons name="speedometer" size={14} color={theme.colors.success} />
             <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Speed</Text>
-            <Text style={{ color: theme.colors.text, fontSize: 12, fontWeight: "600" }}>
+            <Text style={{ color: hasDriveBonus ? theme.colors.success : theme.colors.text, fontSize: 12, fontWeight: "600" }}>
               {formatNumber(stats.speed)}
             </Text>
           </View>

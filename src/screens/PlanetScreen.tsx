@@ -15,7 +15,13 @@ import DefenseCard from "../components/DefenseCard";
 import SendFleetModal from "../components/SendFleetModal";
 import { BuildingType, TechnologyType, ShipType, MissionType, DefenseType } from "../types/game";
 import { SHIP_STATS, SHIP_NAMES } from "../utils/gameConstants";
-import { formatNumber } from "../utils/gameFormulas";
+import { 
+  formatNumber, 
+  calculateShipSpeed, 
+  calculateAttackPower,
+  calculateShieldPower,
+  calculateArmorPower,
+} from "../utils/gameFormulas";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -359,6 +365,7 @@ function FleetTab() {
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
   const planets = useGameStore((state) => state.player.planets);
   const playerFleets = useGameStore((state) => state.player.fleets);
+  const technologies = useGameStore((state) => state.player.technologies);
   const [isSendFleetModalVisible, setIsSendFleetModalVisible] = React.useState(false);
   
   if (!selectedPlanetId) {
@@ -531,10 +538,21 @@ function FleetTab() {
             {Object.entries(availableShips)
               .filter(([_, count]) => count > 0)
               .map(([shipType, count]) => {
-                const stats = SHIP_STATS[shipType as ShipType];
+                const baseStats = SHIP_STATS[shipType as ShipType];
                 const name = SHIP_NAMES[shipType as ShipType];
                 const colors = SHIP_COLORS[shipType as ShipType];
                 const icon = SHIP_ICONS[shipType as ShipType];
+                
+                // Calculate stats with technology bonuses
+                const stats = {
+                  attack: calculateAttackPower(baseStats.attack, technologies[TechnologyType.WeaponsTech]),
+                  speed: calculateShipSpeed(
+                    baseStats.speed,
+                    technologies[TechnologyType.CombustionDrive],
+                    technologies[TechnologyType.ImpulseDrive],
+                    technologies[TechnologyType.HyperspaceDrive]
+                  ),
+                };
                 
                 return (
                   <View
