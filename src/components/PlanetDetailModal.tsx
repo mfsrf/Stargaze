@@ -36,6 +36,14 @@ export default function PlanetDetailModal({
   const planetTypeName = getPlanetTypeName(planet.type);
   const planetDescription = getPlanetTypeDescription(planet.type);
   const resourceBonus = getPlanetResourceBonus(planet.type);
+  
+  // Safety check for undefined bonuses
+  const safeResourceBonus = {
+    metal: resourceBonus?.metal ?? 1.0,
+    crystal: resourceBonus?.crystal ?? 1.0,
+    deuterium: resourceBonus?.deuterium ?? 1.0,
+    energy: resourceBonus?.energy ?? 1.0,
+  };
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -185,12 +193,12 @@ export default function PlanetDetailModal({
                   </View>
                   <Text
                     style={{
-                      color: resourceBonus.metal > 1 ? theme.colors.success : resourceBonus.metal < 1 ? theme.colors.danger : theme.colors.text,
+                      color: safeResourceBonus.metal > 1 ? theme.colors.success : safeResourceBonus.metal < 1 ? theme.colors.danger : theme.colors.text,
                       fontSize: 14,
                       fontWeight: "600",
                     }}
                   >
-                    {resourceBonus.metal > 1 ? "+" : ""}{((resourceBonus.metal - 1) * 100).toFixed(0)}%
+                    {safeResourceBonus.metal > 1 ? "+" : ""}{((safeResourceBonus.metal - 1) * 100).toFixed(0)}%
                   </Text>
                 </View>
               </View>
@@ -203,12 +211,12 @@ export default function PlanetDetailModal({
                   </View>
                   <Text
                     style={{
-                      color: resourceBonus.crystal > 1 ? theme.colors.success : resourceBonus.crystal < 1 ? theme.colors.danger : theme.colors.text,
+                      color: safeResourceBonus.crystal > 1 ? theme.colors.success : safeResourceBonus.crystal < 1 ? theme.colors.danger : theme.colors.text,
                       fontSize: 14,
                       fontWeight: "600",
                     }}
                   >
-                    {resourceBonus.crystal > 1 ? "+" : ""}{((resourceBonus.crystal - 1) * 100).toFixed(0)}%
+                    {safeResourceBonus.crystal > 1 ? "+" : ""}{((safeResourceBonus.crystal - 1) * 100).toFixed(0)}%
                   </Text>
                 </View>
               </View>
@@ -221,12 +229,12 @@ export default function PlanetDetailModal({
                   </View>
                   <Text
                     style={{
-                      color: resourceBonus.deuterium > 1 ? theme.colors.success : resourceBonus.deuterium < 1 ? theme.colors.danger : theme.colors.text,
+                      color: safeResourceBonus.deuterium > 1 ? theme.colors.success : safeResourceBonus.deuterium < 1 ? theme.colors.danger : theme.colors.text,
                       fontSize: 14,
                       fontWeight: "600",
                     }}
                   >
-                    {resourceBonus.deuterium > 1 ? "+" : ""}{((resourceBonus.deuterium - 1) * 100).toFixed(0)}%
+                    {safeResourceBonus.deuterium > 1 ? "+" : ""}{((safeResourceBonus.deuterium - 1) * 100).toFixed(0)}%
                   </Text>
                 </View>
               </View>
@@ -239,12 +247,12 @@ export default function PlanetDetailModal({
                   </View>
                   <Text
                     style={{
-                      color: resourceBonus.energy > 1 ? theme.colors.success : resourceBonus.energy < 1 ? theme.colors.danger : theme.colors.text,
+                      color: safeResourceBonus.energy > 1 ? theme.colors.success : safeResourceBonus.energy < 1 ? theme.colors.danger : theme.colors.text,
                       fontSize: 14,
                       fontWeight: "600",
                     }}
                   >
-                    {resourceBonus.energy > 1 ? "+" : ""}{((resourceBonus.energy - 1) * 100).toFixed(0)}%
+                    {safeResourceBonus.energy > 1 ? "+" : ""}{((safeResourceBonus.energy - 1) * 100).toFixed(0)}%
                   </Text>
                 </View>
               </View>
