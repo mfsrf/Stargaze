@@ -396,10 +396,10 @@ export function calculateShipSpeed(
   baseSpeed: number,
   combustionLevel: number,
   impulseLevel: number,
-  hyperspaceLeve: number
+  hyperspaceLevel: number
 ): number {
   // Use the highest applicable drive technology
-  const maxDriveLevel = Math.max(combustionLevel, impulseLevel, hyperspaceLeve);
+  const maxDriveLevel = Math.max(combustionLevel, impulseLevel, hyperspaceLevel);
   return Math.floor(baseSpeed * calculateTechnologyBonus(maxDriveLevel));
 }
 
