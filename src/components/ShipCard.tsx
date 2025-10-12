@@ -7,7 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
-import { ShipType, TechnologyType } from "../types/game";
+import { ShipType, TechnologyType, BuildingType } from "../types/game";
 import {
   canAfford,
   formatNumber,
@@ -15,8 +15,9 @@ import {
   calculateAttackPower,
   calculateShieldPower,
   calculateArmorPower,
+  checkShipPrerequisites,
 } from "../utils/gameFormulas";
-import { SHIP_BASE_COSTS, SHIP_NAMES, SHIP_STATS } from "../utils/gameConstants";
+import { SHIP_BASE_COSTS, SHIP_NAMES, SHIP_STATS, SHIP_PREREQUISITES, BUILDING_NAMES, TECHNOLOGY_NAMES } from "../utils/gameConstants";
 
 interface ShipCardProps {
   shipType: ShipType;
@@ -110,6 +111,16 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
                         technologies[TechnologyType.ImpulseDrive] > 0 || 
                         technologies[TechnologyType.HyperspaceDrive] > 0;
   
+  // Check prerequisites
+  const prerequisites = SHIP_PREREQUISITES[shipType];
+  const prerequisiteCheck = checkShipPrerequisites(
+    shipType,
+    planet.buildings,
+    technologies,
+    prerequisites
+  );
+  const canBuildShip = prerequisiteCheck.met;
+  
   const quantityNum = parseInt(quantity) || 0;
   const totalCost = {
     metal: cost.metal * quantityNum,
@@ -118,7 +129,7 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
     energy: 0,
   };
   
-  const canBuild = quantityNum > 0 && canAfford(planet.resources, totalCost);
+  const canBuild = canBuildShip && quantityNum > 0 && canAfford(planet.resources, totalCost);
   
   // Calculate max affordable quantity
   const maxMetal = cost.metal > 0 ? Math.floor(planet.resources.metal / cost.metal) : Infinity;
@@ -253,6 +264,46 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
           </View>
         </View>
       </View>
+      
+      {/* Prerequisites - Show if not met */}
+      {!canBuildShip && prerequisiteCheck.missing.length > 0 && (
+        <View style={{ 
+          marginBottom: 12, 
+          padding: 12, 
+          backgroundColor: theme.colors.danger + "10",
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: theme.colors.danger + "30",
+        }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+            <Ionicons name="lock-closed" size={16} color={theme.colors.danger} />
+            <Text style={{ color: theme.colors.danger, fontSize: 13, fontWeight: "700", marginLeft: 6 }}>
+              Requirements Not Met
+            </Text>
+          </View>
+          {prerequisiteCheck.missing.map((req, index) => {
+            // Check if it's a building or technology
+            const isBuildingKey = Object.values(BuildingType).includes(req.name as BuildingType);
+            const isTechKey = Object.values(TechnologyType).includes(req.name as TechnologyType);
+            
+            let displayName = req.name;
+            if (isBuildingKey) {
+              displayName = BUILDING_NAMES[req.name as BuildingType];
+            } else if (isTechKey) {
+              displayName = TECHNOLOGY_NAMES[req.name as TechnologyType];
+            }
+            
+            return (
+              <View key={index} style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                <Ionicons name="alert-circle" size={12} color={theme.colors.danger} />
+                <Text style={{ color: theme.colors.text, fontSize: 11, marginLeft: 6 }}>
+                  {displayName}: Level {req.required} (Current: {req.current})
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
       
       {/* Unit Cost */}
       <View style={{ marginBottom: 12 }}>
@@ -430,7 +481,7 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
                 fontWeight: "600",
               }}
             >
-              {quantityNum === 0 ? "Enter Quantity" : "Insufficient Resources"}
+              {!canBuildShip ? "Locked - Research Required" : quantityNum === 0 ? "Enter Quantity" : "Insufficient Resources"}
             </Text>
           </View>
         )}

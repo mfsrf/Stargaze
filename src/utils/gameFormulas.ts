@@ -423,3 +423,38 @@ export function calculateShieldPower(baseShield: number, shieldingLevel: number)
 export function calculateArmorPower(baseArmor: number, armorLevel: number): number {
   return Math.floor(baseArmor * calculateTechnologyBonus(armorLevel));
 }
+
+/**
+ * Check if ship prerequisites are met
+ */
+export function checkShipPrerequisites(
+  shipType: ShipType,
+  buildings: any,
+  technologies: any,
+  prerequisites: Partial<Record<string, number>> | undefined
+): { met: boolean; missing: Array<{ name: string; required: number; current: number }> } {
+  const missing: Array<{ name: string; required: number; current: number }> = [];
+  
+  if (!prerequisites) {
+    return { met: true, missing: [] };
+  }
+  
+  for (const [key, requiredLevel] of Object.entries(prerequisites)) {
+    if (requiredLevel === undefined) continue;
+    
+    const currentLevel = buildings[key] ?? technologies[key] ?? 0;
+    
+    if (currentLevel < requiredLevel) {
+      missing.push({
+        name: key,
+        required: requiredLevel,
+        current: currentLevel,
+      });
+    }
+  }
+  
+  return {
+    met: missing.length === 0,
+    missing,
+  };
+}

@@ -312,10 +312,13 @@ export const TECHNOLOGY_PREREQUISITES: Partial<Record<TechnologyType, Partial<Te
 
 // Ship prerequisites
 export const SHIP_PREREQUISITES: Partial<Record<ShipType, Partial<TechnologyLevels | BuildingLevels>>> = {
+  [ShipType.SmallCargo]: { [BuildingType.Shipyard]: 2, [TechnologyType.CombustionDrive]: 2 },
+  [ShipType.LargeCargo]: { [BuildingType.Shipyard]: 4, [TechnologyType.CombustionDrive]: 6 },
   [ShipType.LightFighter]: { [BuildingType.Shipyard]: 1, [TechnologyType.CombustionDrive]: 1 },
   [ShipType.HeavyFighter]: { [BuildingType.Shipyard]: 3, [TechnologyType.ImpulseDrive]: 2, [TechnologyType.ArmorTech]: 2 },
   [ShipType.Cruiser]: { [BuildingType.Shipyard]: 5, [TechnologyType.ImpulseDrive]: 4, [TechnologyType.IonTech]: 2 },
   [ShipType.Battleship]: { [BuildingType.Shipyard]: 7, [TechnologyType.HyperspaceDrive]: 4 },
+  [ShipType.Battlecruiser]: { [BuildingType.Shipyard]: 8, [TechnologyType.HyperspaceDrive]: 5, [TechnologyType.LaserTech]: 12 },
   [ShipType.ColonyShip]: { [BuildingType.Shipyard]: 4, [TechnologyType.ImpulseDrive]: 3 },
   [ShipType.Recycler]: { [BuildingType.Shipyard]: 4, [TechnologyType.CombustionDrive]: 6, [TechnologyType.ShieldingTech]: 2 },
   [ShipType.EspionageProbe]: { [BuildingType.Shipyard]: 3, [TechnologyType.CombustionDrive]: 3, [TechnologyType.EspionageTech]: 2 },

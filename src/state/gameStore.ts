@@ -33,6 +33,7 @@ import {
   GALAXY_CONFIG,
   SHIP_BASE_COSTS,
   DEFENSE_BASE_COSTS,
+  SHIP_PREREQUISITES,
 } from "../utils/gameConstants";
 import {
   calculatePlanetProduction,
@@ -44,6 +45,7 @@ import {
   canAfford,
   deductCost,
   calculateUsedFields,
+  checkShipPrerequisites,
 } from "../utils/gameFormulas";
 import { getPlanetType, calculateTemperature } from "../utils/galaxyManager";
 
@@ -509,6 +511,19 @@ const useGameStore = create<GameStore>()(
         const state = get();
         const planet = state.player.planets.find((p) => p.id === planetId);
         if (!planet || planet.buildings[BuildingType.Shipyard] === 0) return false;
+        
+        // Check prerequisites
+        const prerequisites = SHIP_PREREQUISITES[shipType];
+        const prerequisiteCheck = checkShipPrerequisites(
+          shipType,
+          planet.buildings,
+          state.player.technologies,
+          prerequisites
+        );
+        
+        if (!prerequisiteCheck.met) {
+          return false;
+        }
         
         // Calculate total cost
         const shipCost = SHIP_BASE_COSTS[shipType];
