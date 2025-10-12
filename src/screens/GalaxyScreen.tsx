@@ -16,6 +16,7 @@ import { formatNumber } from "../utils/gameFormulas";
 export default function GalaxyScreen() {
   const theme = useThemeStore((state) => state.theme);
   const playerPlanets = useGameStore((state) => state.player.planets);
+  const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
   const aiPlayers = useGameStore((state) => state.aiPlayers);
   const colonizePlanet = useGameStore((state) => state.colonizePlanet);
   
@@ -124,14 +125,14 @@ export default function GalaxyScreen() {
       />
       
       {/* Send Fleet / Attack Modal */}
-      {playerPlanets.length > 0 && attackTargetCoords && (
+      {playerPlanets.length > 0 && attackTargetCoords && selectedPlanetId && (
         <SendFleetModal
           visible={attackModalVisible}
           onClose={() => {
             setAttackModalVisible(false);
             setAttackTargetCoords(null);
           }}
-          planetId={playerPlanets[0].id}
+          planetId={selectedPlanetId}
           targetCoordinates={attackTargetCoords}
         />
       )}
