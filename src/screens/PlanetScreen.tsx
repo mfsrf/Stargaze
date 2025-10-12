@@ -1,4 +1,4 @@
-// PlanetScreen - main screen with tabs for Buildings, Research, Shipyard, Fleet
+// PlanetScreen - main screen with tabs for Buildings, Research, Shipyard, Defense, Fleet
 
 import React from "react";
 import { View, ScrollView, Text, TouchableOpacity } from "react-native";
@@ -11,8 +11,9 @@ import PlanetSelector from "../components/PlanetSelector";
 import BuildingCard from "../components/BuildingCard";
 import TechnologyCard from "../components/TechnologyCard";
 import ShipCard from "../components/ShipCard";
+import DefenseCard from "../components/DefenseCard";
 import SendFleetModal from "../components/SendFleetModal";
-import { BuildingType, TechnologyType, ShipType, MissionType } from "../types/game";
+import { BuildingType, TechnologyType, ShipType, MissionType, DefenseType } from "../types/game";
 import { SHIP_STATS, SHIP_NAMES } from "../utils/gameConstants";
 import { formatNumber } from "../utils/gameFormulas";
 import { Ionicons } from "@expo/vector-icons";
@@ -265,6 +266,88 @@ function ShipyardTab() {
         </Text>
         {civilShips.map((shipType) => (
           <ShipCard key={shipType} shipType={shipType} planetId={selectedPlanetId} />
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function DefenseTab() {
+  const theme = useThemeStore((state) => state.theme);
+  const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
+  const planets = useGameStore((state) => state.player.planets);
+  
+  if (!selectedPlanetId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>No planet selected</Text>
+      </View>
+    );
+  }
+  
+  const planet = planets.find((p) => p.id === selectedPlanetId);
+  
+  if (!planet) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: theme.colors.textSecondary }}>Planet not found</Text>
+      </View>
+    );
+  }
+  
+  // Check if shipyard exists (needed for defense)
+  if (planet.buildings[BuildingType.Shipyard] === 0) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <Text style={{ color: theme.colors.textSecondary, textAlign: "center", marginBottom: 8 }}>
+          You need to build a Shipyard first!
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, textAlign: "center", fontSize: 12 }}>
+          (Go to Buildings tab → Facilities)
+        </Text>
+      </View>
+    );
+  }
+  
+  const defenseUnits = [
+    DefenseType.RocketLauncher,
+    DefenseType.LightLaser,
+    DefenseType.HeavyLaser,
+    DefenseType.GaussCannon,
+    DefenseType.IonCannon,
+    DefenseType.PlasmaTurret,
+  ];
+  
+  const shieldDomes = [
+    DefenseType.SmallShieldDome,
+    DefenseType.LargeShieldDome,
+  ];
+  
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      contentContainerStyle={{ padding: 16 }}
+    >
+      {/* Defense Units Section */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Defense Units
+        </Text>
+        {defenseUnits.map((defenseType) => (
+          <DefenseCard key={defenseType} defenseType={defenseType} planetId={selectedPlanetId} />
+        ))}
+      </View>
+      
+      {/* Shield Domes Section */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+          Shield Domes
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
+          Shield domes can only be built once per planet
+        </Text>
+        {shieldDomes.map((defenseType) => (
+          <DefenseCard key={defenseType} defenseType={defenseType} planetId={selectedPlanetId} />
         ))}
       </View>
     </ScrollView>
@@ -646,6 +729,7 @@ export default function PlanetScreen() {
         <Tab.Screen name="Buildings" component={BuildingsTab} />
         <Tab.Screen name="Research" component={ResearchTab} />
         <Tab.Screen name="Shipyard" component={ShipyardTab} />
+        <Tab.Screen name="Defense" component={DefenseTab} />
         <Tab.Screen name="Fleet" component={FleetTab} />
       </Tab.Navigator>
     </SafeAreaView>

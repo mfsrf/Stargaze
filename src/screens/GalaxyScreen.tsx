@@ -61,6 +61,15 @@ export default function GalaxyScreen() {
     setIsPlanetModalVisible(true);
   };
   
+  const handleFindRandomEnemy = () => {
+    if (aiPlanets.length === 0) return;
+    
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const randomEnemy = aiPlanets[Math.floor(Math.random() * aiPlanets.length)];
+    setSelectedGalaxy(randomEnemy.coordinates.galaxy);
+    setSelectedSystem(randomEnemy.coordinates.system);
+  };
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={["top"]}>
       {/* Planet Detail Modal */}
@@ -84,6 +93,29 @@ export default function GalaxyScreen() {
         <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
           Galaxy Explorer
         </Text>
+        
+        {/* Find Random Enemy Button */}
+        {aiPlanets.length > 0 && (
+          <TouchableOpacity
+            onPress={handleFindRandomEnemy}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.danger,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="search" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+              Find Random Enemy
+            </Text>
+          </TouchableOpacity>
+        )}
         
         {/* Galaxy Selector */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>

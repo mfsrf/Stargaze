@@ -13,6 +13,7 @@ import {
   Resources,
   BuildingType,
   TechnologyType,
+  DefenseType,
   Fleet,
   Message,
   Coordinates,
@@ -31,6 +32,7 @@ import {
   DEFAULT_RESOURCE_MULTIPLIER,
   GALAXY_CONFIG,
   SHIP_BASE_COSTS,
+  DEFENSE_BASE_COSTS,
 } from "../utils/gameConstants";
 import {
   calculatePlanetProduction,
@@ -64,6 +66,7 @@ interface GameStore extends GameState {
   
   // Fleet management
   buildShips: (planetId: string, shipType: ShipType, quantity: number) => boolean;
+  buildDefense: (planetId: string, defenseType: DefenseType, quantity: number) => boolean;
   sendFleet: (
     fromPlanetId: string,
     destination: Coordinates,
@@ -526,6 +529,47 @@ const useGameStore = create<GameStore>()(
               fleet: {
                 ...p.fleet,
                 [shipType]: p.fleet[shipType] + quantity,
+              },
+            };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+        
+        return true;
+      },
+      
+      // Build defense
+      buildDefense: (planetId: string, defenseType: DefenseType, quantity: number) => {
+        const state = get();
+        const planet = state.player.planets.find((p) => p.id === planetId);
+        if (!planet || planet.buildings[BuildingType.Shipyard] === 0) return false;
+        
+        // Calculate total cost
+        const defenseCost = DEFENSE_BASE_COSTS[defenseType];
+        const totalCost = {
+          metal: defenseCost.metal * quantity,
+          crystal: defenseCost.crystal * quantity,
+          deuterium: defenseCost.deuterium * quantity,
+          energy: 0,
+        };
+        
+        if (!canAfford(planet.resources, totalCost)) return false;
+        
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planetId) {
+            return {
+              ...p,
+              resources: deductCost(p.resources, totalCost),
+              defense: {
+                ...p.defense,
+                [defenseType]: p.defense[defenseType] + quantity,
               },
             };
           }
