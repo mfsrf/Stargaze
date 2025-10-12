@@ -238,9 +238,24 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
                 </View>
               )}
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 10, textAlign: "center", marginTop: 4 }}>
-              Time: {formatDuration(researchTime)}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>
+                Time: {formatDuration(researchTime)}
+              </Text>
+              {bestLabPlanet && bestLabPlanet.buildings[BuildingType.ResearchLab] > 0 && (
+                <View style={{ 
+                  marginLeft: 6,
+                  backgroundColor: theme.colors.primary + "20",
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  borderRadius: 3,
+                }}>
+                  <Text style={{ color: theme.colors.primary, fontSize: 9, fontWeight: "600" }}>
+                    -{Math.round((1 - 1 / (1 + bestLabPlanet.buildings[BuildingType.ResearchLab])) * 100)}%
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           
           <TouchableOpacity

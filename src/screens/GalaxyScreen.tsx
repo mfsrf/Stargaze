@@ -15,8 +15,10 @@ export default function GalaxyScreen() {
   const playerPlanets = useGameStore((state) => state.player.planets);
   const aiPlayers = useGameStore((state) => state.aiPlayers);
   
-  const [selectedGalaxy, setSelectedGalaxy] = useState(1);
-  const [selectedSystem, setSelectedSystem] = useState(1);
+  // Start at first player planet location
+  const firstPlanet = playerPlanets[0];
+  const [selectedGalaxy, setSelectedGalaxy] = useState(firstPlanet?.coordinates.galaxy || 1);
+  const [selectedSystem, setSelectedSystem] = useState(firstPlanet?.coordinates.system || 1);
   
   // Get all AI planets
   const aiPlanets = aiPlayers.flatMap((ai) => ai.planets);

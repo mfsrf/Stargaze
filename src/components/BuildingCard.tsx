@@ -236,9 +236,24 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                 </View>
               )}
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 10, textAlign: "center", marginTop: 4 }}>
-              Time: {formatDuration(constructionTime)}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>
+                Time: {formatDuration(constructionTime)}
+              </Text>
+              {planet.buildings[BuildingType.RoboticsFactory] > 0 && (
+                <View style={{ 
+                  marginLeft: 6,
+                  backgroundColor: theme.colors.success + "20",
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  borderRadius: 3,
+                }}>
+                  <Text style={{ color: theme.colors.success, fontSize: 9, fontWeight: "600" }}>
+                    -{Math.round((1 - 1 / (1 + planet.buildings[BuildingType.RoboticsFactory])) * 100)}%
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           
           <TouchableOpacity
