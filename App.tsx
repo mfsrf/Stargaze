@@ -1,8 +1,19 @@
 import { StatusBar } from "expo-status-bar";
-import { Text, View } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Ionicons } from "@expo/vector-icons";
+import useGameStore from "./src/state/gameStore";
+import useThemeStore from "./src/state/themeStore";
+import NewGameScreen from "./src/screens/NewGameScreen";
+import PlanetScreen from "./src/screens/PlanetScreen";
+import GalaxyScreen from "./src/screens/GalaxyScreen";
+import MessagesScreen from "./src/screens/MessagesScreen";
+import StatsScreen from "./src/screens/StatsScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
@@ -25,17 +36,97 @@ const openai_api_key = Constants.expoConfig.extra.apikey;
 
 */
 
-export default function App() {
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+function MainTabs() {
+  const theme = useThemeStore((state) => state.theme);
+  
   return (
-    <GestureHandlerRootView>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = "home";
+          
+          if (route.name === "Planet") {
+            iconName = focused ? "planet" : "planet-outline";
+          } else if (route.name === "Galaxy") {
+            iconName = focused ? "globe" : "globe-outline";
+          } else if (route.name === "Messages") {
+            iconName = focused ? "mail" : "mail-outline";
+          } else if (route.name === "Stats") {
+            iconName = focused ? "stats-chart" : "stats-chart-outline";
+          } else if (route.name === "Settings") {
+            iconName = focused ? "settings" : "settings-outline";
+          }
+          
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.colors.card,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Planet" component={PlanetScreen} />
+      <Tab.Screen name="Galaxy" component={GalaxyScreen} />
+      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Stats" component={StatsScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
+    </Tab.Navigator>
+  );
+}
+
+export default function App() {
+  const initialized = useGameStore((state) => state.initialized);
+  const theme = useThemeStore((state) => state.theme);
+  
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-center text-red-500">
-              This screen will be replaced with your app when the agent is done building it.
-            </Text>
-            <StatusBar style="auto" />
-          </View>
+        <NavigationContainer
+          theme={{
+            dark: theme.dark,
+            colors: {
+              primary: theme.colors.primary,
+              background: theme.colors.background,
+              card: theme.colors.card,
+              text: theme.colors.text,
+              border: theme.colors.border,
+              notification: theme.colors.danger,
+            },
+            fonts: {
+              regular: {
+                fontFamily: "System",
+                fontWeight: "400",
+              },
+              medium: {
+                fontFamily: "System",
+                fontWeight: "500",
+              },
+              bold: {
+                fontFamily: "System",
+                fontWeight: "700",
+              },
+              heavy: {
+                fontFamily: "System",
+                fontWeight: "900",
+              },
+            },
+          }}
+        >
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!initialized ? (
+              <Stack.Screen name="NewGame" component={NewGameScreen} />
+            ) : (
+              <Stack.Screen name="Main" component={MainTabs} />
+            )}
+          </Stack.Navigator>
+          <StatusBar style={theme.dark ? "light" : "dark"} />
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>

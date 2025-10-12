@@ -1,0 +1,573 @@
+// Main game state management store
+
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
+import {
+  GameState,
+  Player,
+  Planet,
+  Resources,
+  BuildingType,
+  TechnologyType,
+  Fleet,
+  Message,
+  Coordinates,
+  FleetComposition,
+  ShipType,
+  MissionType,
+  GameSettings,
+} from "../types/game";
+import {
+  STARTING_RESOURCES,
+  INITIAL_BUILDINGS,
+  INITIAL_TECHNOLOGIES,
+  INITIAL_FLEET,
+  INITIAL_DEFENSE,
+  DEFAULT_RESOURCE_MULTIPLIER,
+  GALAXY_CONFIG,
+  SHIP_BASE_COSTS,
+} from "../utils/gameConstants";
+import {
+  calculatePlanetProduction,
+  calculateStorageCapacity,
+  getBuildingCost,
+  getBuildingConstructionTime,
+  getTechnologyCost,
+  getTechnologyResearchTime,
+  canAfford,
+  deductCost,
+  calculateUsedFields,
+} from "../utils/gameFormulas";
+
+interface GameStore extends GameState {
+  // Game initialization
+  initializeGame: (playerName: string, startGalaxy: number, aiCount: number) => void;
+  resetGame: () => void;
+  
+  // Resource management
+  updateResources: () => void;
+  
+  // Building management
+  upgradeBuilding: (planetId: string, buildingType: BuildingType) => boolean;
+  finishConstruction: (planetId: string) => void;
+  
+  // Research management
+  startResearch: (technologyType: TechnologyType) => boolean;
+  finishResearch: () => void;
+  
+  // Fleet management
+  buildShips: (planetId: string, shipType: ShipType, quantity: number) => boolean;
+  sendFleet: (
+    fromPlanetId: string,
+    destination: Coordinates,
+    ships: FleetComposition,
+    mission: MissionType,
+    cargo?: Resources
+  ) => boolean;
+  
+  // Planet management
+  colonizePlanet: (coordinates: Coordinates) => boolean;
+  selectPlanet: (planetId: string) => void;
+  
+  // Message management
+  addMessage: (message: Message) => void;
+  markMessageAsRead: (messageId: string) => void;
+  deleteMessage: (messageId: string) => void;
+  
+  // Settings
+  updateSettings: (settings: Partial<GameSettings>) => void;
+  
+  // Current selections
+  selectedPlanetId: string | null;
+  researchQueue: {
+    type: TechnologyType;
+    startTime: number;
+    endTime: number;
+  } | null;
+}
+
+const createInitialPlanet = (
+  name: string,
+  coordinates: Coordinates,
+  isStarting: boolean
+): Planet => {
+  return {
+    id: uuidv4(),
+    name,
+    coordinates,
+    resources: isStarting ? { ...STARTING_RESOURCES } : { metal: 0, crystal: 0, deuterium: 0, energy: 0 },
+    buildings: { ...INITIAL_BUILDINGS },
+    defense: { ...INITIAL_DEFENSE },
+    fleet: { ...INITIAL_FLEET },
+    maxFields: 163,
+    usedFields: 0,
+    lastUpdate: Date.now(),
+    constructionQueue: null,
+  };
+};
+
+const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      player: {
+        id: "",
+        name: "",
+        planets: [],
+        technologies: { ...INITIAL_TECHNOLOGIES },
+        fleets: [],
+        messages: [],
+        totalPoints: 0,
+        economyPoints: 0,
+        researchPoints: 0,
+        militaryPoints: 0,
+      },
+      aiPlayers: [],
+      settings: {
+        resourceMultiplier: DEFAULT_RESOURCE_MULTIPLIER,
+        speedMultiplier: 1,
+        notificationsEnabled: true,
+        darkMode: true,
+      },
+      lastUpdate: Date.now(),
+      gameStartTime: 0,
+      initialized: false,
+      selectedPlanetId: null,
+      researchQueue: null,
+      
+      // Initialize new game
+      initializeGame: (playerName: string, startGalaxy: number, aiCount: number) => {
+        const playerId = uuidv4();
+        
+        // Create player's starting planet
+        const startCoordinates: Coordinates = {
+          galaxy: startGalaxy,
+          system: Math.floor(Math.random() * GALAXY_CONFIG.systems) + 1,
+          position: [4, 6, 8, 10, 12][Math.floor(Math.random() * 5)],
+        };
+        
+        const startingPlanet = createInitialPlanet("Homeworld", startCoordinates, true);
+        
+        const player: Player = {
+          id: playerId,
+          name: playerName,
+          planets: [startingPlanet],
+          technologies: { ...INITIAL_TECHNOLOGIES },
+          fleets: [],
+          messages: [],
+          totalPoints: 0,
+          economyPoints: 0,
+          researchPoints: 0,
+          militaryPoints: 0,
+        };
+        
+        set({
+          player,
+          aiPlayers: [], // AI players will be initialized separately
+          selectedPlanetId: startingPlanet.id,
+          initialized: true,
+          gameStartTime: Date.now(),
+          lastUpdate: Date.now(),
+        });
+      },
+      
+      // Reset game
+      resetGame: () => {
+        set({
+          player: {
+            id: "",
+            name: "",
+            planets: [],
+            technologies: { ...INITIAL_TECHNOLOGIES },
+            fleets: [],
+            messages: [],
+            totalPoints: 0,
+            economyPoints: 0,
+            researchPoints: 0,
+            militaryPoints: 0,
+          },
+          aiPlayers: [],
+          selectedPlanetId: null,
+          initialized: false,
+          researchQueue: null,
+          lastUpdate: Date.now(),
+          gameStartTime: 0,
+        });
+      },
+      
+      // Update resources based on time passed
+      updateResources: () => {
+        const state = get();
+        const currentTime = Date.now();
+        const timeDelta = (currentTime - state.lastUpdate) / 1000; // seconds
+        
+        const updatedPlanets = state.player.planets.map((planet) => {
+          const production = calculatePlanetProduction(planet, state.settings.resourceMultiplier);
+          const productionPerSecond = {
+            metal: production.metal / 3600,
+            crystal: production.crystal / 3600,
+            deuterium: production.deuterium / 3600,
+            energy: production.energy,
+          };
+          
+          // Calculate storage capacities
+          const metalCap = calculateStorageCapacity(planet.buildings[BuildingType.MetalStorage]);
+          const crystalCap = calculateStorageCapacity(planet.buildings[BuildingType.CrystalStorage]);
+          const deuteriumCap = calculateStorageCapacity(planet.buildings[BuildingType.DeuteriumTank]);
+          
+          // Update resources with caps
+          const newResources = {
+            metal: Math.min(planet.resources.metal + productionPerSecond.metal * timeDelta, metalCap),
+            crystal: Math.min(planet.resources.crystal + productionPerSecond.crystal * timeDelta, crystalCap),
+            deuterium: Math.min(planet.resources.deuterium + productionPerSecond.deuterium * timeDelta, deuteriumCap),
+            energy: productionPerSecond.energy,
+          };
+          
+          // Check and complete construction
+          let updatedPlanet = { ...planet, resources: newResources };
+          if (planet.constructionQueue && currentTime >= planet.constructionQueue.endTime) {
+            const buildingType = planet.constructionQueue.type;
+            updatedPlanet.buildings = {
+              ...updatedPlanet.buildings,
+              [buildingType]: updatedPlanet.buildings[buildingType] + 1,
+            };
+            updatedPlanet.constructionQueue = null;
+            updatedPlanet.usedFields = calculateUsedFields(updatedPlanet);
+          }
+          
+          return updatedPlanet;
+        });
+        
+        // Check and complete research
+        let updatedTechnologies = { ...state.player.technologies };
+        let updatedResearchQueue = state.researchQueue;
+        if (state.researchQueue && currentTime >= state.researchQueue.endTime) {
+          const techType = state.researchQueue.type;
+          updatedTechnologies = {
+            ...updatedTechnologies,
+            [techType]: updatedTechnologies[techType] + 1,
+          };
+          updatedResearchQueue = null;
+        }
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+            technologies: updatedTechnologies,
+          },
+          researchQueue: updatedResearchQueue,
+          lastUpdate: currentTime,
+        });
+      },
+      
+      // Upgrade building
+      upgradeBuilding: (planetId: string, buildingType: BuildingType) => {
+        const state = get();
+        const planet = state.player.planets.find((p) => p.id === planetId);
+        if (!planet || planet.constructionQueue) return false;
+        
+        const currentLevel = planet.buildings[buildingType];
+        const cost = getBuildingCost(buildingType, currentLevel);
+        
+        if (!canAfford(planet.resources, cost)) return false;
+        
+        // Check field availability
+        const fieldsNeeded = calculateUsedFields(planet) + 1;
+        if (fieldsNeeded > planet.maxFields) return false;
+        
+        const constructionTime = getBuildingConstructionTime(
+          buildingType,
+          currentLevel,
+          planet.buildings[BuildingType.RoboticsFactory],
+          planet.buildings[BuildingType.NaniteFactory]
+        );
+        
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planetId) {
+            return {
+              ...p,
+              resources: deductCost(p.resources, cost),
+              constructionQueue: {
+                type: buildingType,
+                startTime: Date.now(),
+                endTime: Date.now() + constructionTime * 1000,
+              },
+            };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+        
+        return true;
+      },
+      
+      // Finish construction manually (for immediate completion)
+      finishConstruction: (planetId: string) => {
+        const state = get();
+        const updatedPlanets = state.player.planets.map((planet) => {
+          if (planet.id === planetId && planet.constructionQueue) {
+            const buildingType = planet.constructionQueue.type;
+            return {
+              ...planet,
+              buildings: {
+                ...planet.buildings,
+                [buildingType]: planet.buildings[buildingType] + 1,
+              },
+              constructionQueue: null,
+              usedFields: calculateUsedFields(planet) + 1,
+            };
+          }
+          return planet;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+      },
+      
+      // Start research
+      startResearch: (technologyType: TechnologyType) => {
+        const state = get();
+        if (state.researchQueue) return false;
+        
+        const currentLevel = state.player.technologies[technologyType];
+        const cost = getTechnologyCost(technologyType, currentLevel);
+        
+        // Find planet with highest research lab that can afford it
+        const planet = state.player.planets.find((p) =>
+          p.buildings[BuildingType.ResearchLab] > 0 && canAfford(p.resources, cost)
+        );
+        
+        if (!planet) return false;
+        
+        const researchTime = getTechnologyResearchTime(
+          technologyType,
+          currentLevel,
+          planet.buildings[BuildingType.ResearchLab]
+        );
+        
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planet.id) {
+            return {
+              ...p,
+              resources: deductCost(p.resources, cost),
+            };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+          researchQueue: {
+            type: technologyType,
+            startTime: Date.now(),
+            endTime: Date.now() + researchTime * 1000,
+          },
+        });
+        
+        return true;
+      },
+      
+      // Finish research
+      finishResearch: () => {
+        const state = get();
+        if (!state.researchQueue) return;
+        
+        const techType = state.researchQueue.type;
+        set({
+          player: {
+            ...state.player,
+            technologies: {
+              ...state.player.technologies,
+              [techType]: state.player.technologies[techType] + 1,
+            },
+          },
+          researchQueue: null,
+        });
+      },
+      
+      // Build ships
+      buildShips: (planetId: string, shipType: ShipType, quantity: number) => {
+        const state = get();
+        const planet = state.player.planets.find((p) => p.id === planetId);
+        if (!planet || planet.buildings[BuildingType.Shipyard] === 0) return false;
+        
+        // Calculate total cost
+        const shipCost = SHIP_BASE_COSTS[shipType];
+        const totalCost = {
+          metal: shipCost.metal * quantity,
+          crystal: shipCost.crystal * quantity,
+          deuterium: shipCost.deuterium * quantity,
+          energy: 0,
+        };
+        
+        if (!canAfford(planet.resources, totalCost)) return false;
+        
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planetId) {
+            return {
+              ...p,
+              resources: deductCost(p.resources, totalCost),
+              fleet: {
+                ...p.fleet,
+                [shipType]: p.fleet[shipType] + quantity,
+              },
+            };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+        
+        return true;
+      },
+      
+      // Send fleet (simplified for now)
+      sendFleet: (
+        fromPlanetId: string,
+        destination: Coordinates,
+        ships: FleetComposition,
+        mission: MissionType,
+        cargo?: Resources
+      ) => {
+        // This will be implemented with AI and combat system
+        return true;
+      },
+      
+      // Colonize planet
+      colonizePlanet: (coordinates: Coordinates) => {
+        const state = get();
+        
+        // Check if player has a colony ship
+        let colonyShipPlanet: Planet | null = null;
+        for (const planet of state.player.planets) {
+          if (planet.fleet[ShipType.ColonyShip] > 0) {
+            colonyShipPlanet = planet;
+            break;
+          }
+        }
+        
+        if (!colonyShipPlanet) return false;
+        
+        // Create new planet
+        const newPlanet = createInitialPlanet(
+          `Colony ${state.player.planets.length + 1}`,
+          coordinates,
+          false
+        );
+        
+        // Remove colony ship
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === colonyShipPlanet!.id) {
+            return {
+              ...p,
+              fleet: {
+                ...p.fleet,
+                [ShipType.ColonyShip]: p.fleet[ShipType.ColonyShip] - 1,
+              },
+            };
+          }
+          return p;
+        });
+        
+        updatedPlanets.push(newPlanet);
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+        
+        return true;
+      },
+      
+      // Select planet
+      selectPlanet: (planetId: string) => {
+        set({ selectedPlanetId: planetId });
+      },
+      
+      // Add message
+      addMessage: (message: Message) => {
+        const state = get();
+        set({
+          player: {
+            ...state.player,
+            messages: [message, ...state.player.messages],
+          },
+        });
+      },
+      
+      // Mark message as read
+      markMessageAsRead: (messageId: string) => {
+        const state = get();
+        set({
+          player: {
+            ...state.player,
+            messages: state.player.messages.map((m) =>
+              m.id === messageId ? { ...m, read: true } : m
+            ),
+          },
+        });
+      },
+      
+      // Delete message
+      deleteMessage: (messageId: string) => {
+        const state = get();
+        set({
+          player: {
+            ...state.player,
+            messages: state.player.messages.filter((m) => m.id !== messageId),
+          },
+        });
+      },
+      
+      // Update settings
+      updateSettings: (settings: Partial<GameSettings>) => {
+        const state = get();
+        set({
+          settings: {
+            ...state.settings,
+            ...settings,
+          },
+        });
+      },
+    }),
+    {
+      name: "game-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        player: state.player,
+        aiPlayers: state.aiPlayers,
+        settings: state.settings,
+        lastUpdate: state.lastUpdate,
+        gameStartTime: state.gameStartTime,
+        initialized: state.initialized,
+        selectedPlanetId: state.selectedPlanetId,
+        researchQueue: state.researchQueue,
+      }),
+    }
+  )
+);
+
+export default useGameStore;

@@ -1,0 +1,292 @@
+// Game type definitions for OGame-inspired space strategy game
+
+export interface Coordinates {
+  galaxy: number;
+  system: number;
+  position: number;
+}
+
+export interface Resources {
+  metal: number;
+  crystal: number;
+  deuterium: number;
+  energy: number;
+}
+
+export enum BuildingType {
+  MetalMine = "metalMine",
+  CrystalMine = "crystalMine",
+  DeuteriumSynthesizer = "deuteriumSynthesizer",
+  SolarPlant = "solarPlant",
+  FusionReactor = "fusionReactor",
+  MetalStorage = "metalStorage",
+  CrystalStorage = "crystalStorage",
+  DeuteriumTank = "deuteriumTank",
+  RoboticsFactory = "roboticsFactory",
+  Shipyard = "shipyard",
+  ResearchLab = "researchLab",
+  AllianceDepot = "allianceDepot",
+  NaniteFactory = "naniteFactory",
+  Terraformer = "terraformer"
+}
+
+export enum TechnologyType {
+  EnergyTech = "energyTech",
+  LaserTech = "laserTech",
+  IonTech = "ionTech",
+  HyperspaceTech = "hyperspaceTech",
+  PlasmaTech = "plasmaTech",
+  CombustionDrive = "combustionDrive",
+  ImpulseDrive = "impulseDrive",
+  HyperspaceDrive = "hyperspaceDrive",
+  EspionageTech = "espionageTech",
+  ComputerTech = "computerTech",
+  Astrophysics = "astrophysics",
+  WeaponsTech = "weaponsTech",
+  ShieldingTech = "shieldingTech",
+  ArmorTech = "armorTech"
+}
+
+export enum ShipType {
+  LightFighter = "lightFighter",
+  HeavyFighter = "heavyFighter",
+  Cruiser = "cruiser",
+  Battleship = "battleship",
+  Battlecruiser = "battlecruiser",
+  Bomber = "bomber",
+  Destroyer = "destroyer",
+  Deathstar = "deathstar",
+  SmallCargo = "smallCargo",
+  LargeCargo = "largeCargo",
+  ColonyShip = "colonyShip",
+  Recycler = "recycler",
+  EspionageProbe = "espionageProbe"
+}
+
+export enum DefenseType {
+  RocketLauncher = "rocketLauncher",
+  LightLaser = "lightLaser",
+  HeavyLaser = "heavyLaser",
+  GaussCannon = "gaussCannon",
+  IonCannon = "ionCannon",
+  PlasmaTurret = "plasmaTurret",
+  SmallShieldDome = "smallShieldDome",
+  LargeShieldDome = "largeShieldDome"
+}
+
+export enum MissionType {
+  Attack = "attack",
+  Transport = "transport",
+  Colonize = "colonize",
+  Espionage = "espionage",
+  Harvest = "harvest",
+  Hold = "hold"
+}
+
+export interface BuildingLevels {
+  [BuildingType.MetalMine]: number;
+  [BuildingType.CrystalMine]: number;
+  [BuildingType.DeuteriumSynthesizer]: number;
+  [BuildingType.SolarPlant]: number;
+  [BuildingType.FusionReactor]: number;
+  [BuildingType.MetalStorage]: number;
+  [BuildingType.CrystalStorage]: number;
+  [BuildingType.DeuteriumTank]: number;
+  [BuildingType.RoboticsFactory]: number;
+  [BuildingType.Shipyard]: number;
+  [BuildingType.ResearchLab]: number;
+  [BuildingType.AllianceDepot]: number;
+  [BuildingType.NaniteFactory]: number;
+  [BuildingType.Terraformer]: number;
+}
+
+export interface TechnologyLevels {
+  [TechnologyType.EnergyTech]: number;
+  [TechnologyType.LaserTech]: number;
+  [TechnologyType.IonTech]: number;
+  [TechnologyType.HyperspaceTech]: number;
+  [TechnologyType.PlasmaTech]: number;
+  [TechnologyType.CombustionDrive]: number;
+  [TechnologyType.ImpulseDrive]: number;
+  [TechnologyType.HyperspaceDrive]: number;
+  [TechnologyType.EspionageTech]: number;
+  [TechnologyType.ComputerTech]: number;
+  [TechnologyType.Astrophysics]: number;
+  [TechnologyType.WeaponsTech]: number;
+  [TechnologyType.ShieldingTech]: number;
+  [TechnologyType.ArmorTech]: number;
+}
+
+export interface FleetComposition {
+  [ShipType.LightFighter]: number;
+  [ShipType.HeavyFighter]: number;
+  [ShipType.Cruiser]: number;
+  [ShipType.Battleship]: number;
+  [ShipType.Battlecruiser]: number;
+  [ShipType.Bomber]: number;
+  [ShipType.Destroyer]: number;
+  [ShipType.Deathstar]: number;
+  [ShipType.SmallCargo]: number;
+  [ShipType.LargeCargo]: number;
+  [ShipType.ColonyShip]: number;
+  [ShipType.Recycler]: number;
+  [ShipType.EspionageProbe]: number;
+}
+
+export interface DefenseComposition {
+  [DefenseType.RocketLauncher]: number;
+  [DefenseType.LightLaser]: number;
+  [DefenseType.HeavyLaser]: number;
+  [DefenseType.GaussCannon]: number;
+  [DefenseType.IonCannon]: number;
+  [DefenseType.PlasmaTurret]: number;
+  [DefenseType.SmallShieldDome]: number;
+  [DefenseType.LargeShieldDome]: number;
+}
+
+export interface ConstructionQueue {
+  type: BuildingType;
+  startTime: number;
+  endTime: number;
+}
+
+export interface ResearchQueue {
+  type: TechnologyType;
+  startTime: number;
+  endTime: number;
+}
+
+export interface Planet {
+  id: string;
+  name: string;
+  coordinates: Coordinates;
+  resources: Resources;
+  buildings: BuildingLevels;
+  defense: DefenseComposition;
+  fleet: FleetComposition;
+  maxFields: number;
+  usedFields: number;
+  lastUpdate: number;
+  constructionQueue: ConstructionQueue | null;
+}
+
+export interface Fleet {
+  id: string;
+  ships: FleetComposition;
+  mission: MissionType;
+  origin: Coordinates;
+  destination: Coordinates;
+  departureTime: number;
+  arrivalTime: number;
+  returnTime?: number;
+  cargo?: Resources;
+  isReturning: boolean;
+  ownerId: string;
+}
+
+export interface CombatRound {
+  attackerShips: FleetComposition;
+  defenderShips: FleetComposition;
+  defenderDefense: DefenseComposition;
+  attackerLosses: FleetComposition;
+  defenderShipLosses: FleetComposition;
+  defenderDefenseLosses: DefenseComposition;
+  attackerDamage: number;
+  defenderDamage: number;
+}
+
+export interface CombatReport {
+  id: string;
+  timestamp: number;
+  coordinates: Coordinates;
+  attacker: string;
+  defender: string;
+  attackerFleet: FleetComposition;
+  defenderFleet: FleetComposition;
+  defenderDefense: DefenseComposition;
+  rounds: CombatRound[];
+  result: "attackerWin" | "defenderWin" | "draw";
+  plunder?: Resources;
+  debrisField?: Resources;
+  attackerFleetAfter: FleetComposition;
+  defenderFleetAfter: FleetComposition;
+  defenderDefenseAfter: DefenseComposition;
+}
+
+export interface EspionageReport {
+  id: string;
+  timestamp: number;
+  coordinates: Coordinates;
+  targetPlayer: string;
+  resources?: Resources;
+  fleet?: FleetComposition;
+  defense?: DefenseComposition;
+  buildings?: Partial<BuildingLevels>;
+  research?: Partial<TechnologyLevels>;
+  detectionChance: number;
+}
+
+export interface Message {
+  id: string;
+  timestamp: number;
+  type: "combat" | "espionage" | "fleet" | "other";
+  title: string;
+  content: string;
+  read: boolean;
+  data?: CombatReport | EspionageReport | any;
+}
+
+export enum AIDifficulty {
+  Easy = "easy",
+  Medium = "medium",
+  Hard = "hard"
+}
+
+export interface AIPlayer {
+  id: string;
+  name: string;
+  difficulty: AIDifficulty;
+  planets: Planet[];
+  technologies: TechnologyLevels;
+  fleets: Fleet[];
+  lastActionTime: number;
+  strategy: "defensive" | "balanced" | "aggressive";
+  targetPlayer?: string;
+}
+
+export interface Player {
+  id: string;
+  name: string;
+  planets: Planet[];
+  technologies: TechnologyLevels;
+  fleets: Fleet[];
+  messages: Message[];
+  totalPoints: number;
+  economyPoints: number;
+  researchPoints: number;
+  militaryPoints: number;
+}
+
+export interface GalaxyPosition {
+  coordinates: Coordinates;
+  planet: Planet | null;
+  ownerId: string | null;
+  playerName: string | null;
+  debrisField: Resources | null;
+}
+
+export interface GameSettings {
+  resourceMultiplier: number;
+  speedMultiplier: number;
+  notificationsEnabled: boolean;
+  darkMode: boolean;
+}
+
+export interface GameState {
+  player: Player;
+  aiPlayers: AIPlayer[];
+  settings: GameSettings;
+  lastUpdate: number;
+  gameStartTime: number;
+  initialized: boolean;
+}
