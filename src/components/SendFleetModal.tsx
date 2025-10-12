@@ -301,6 +301,36 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
               <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
                 Select Ships ({totalSelectedShips} selected)
               </Text>
+              
+              {/* Debug Info */}
+              <View style={{ 
+                backgroundColor: theme.colors.warning + "20", 
+                padding: 12, 
+                borderRadius: 8, 
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.warning + "40"
+              }}>
+                <Text style={{ color: theme.colors.warning, fontSize: 12, fontWeight: "600", marginBottom: 4 }}>
+                  Debug Info:
+                </Text>
+                <Text style={{ color: theme.colors.text, fontSize: 11 }}>
+                  Source Planet: {planet.name}
+                </Text>
+                <Text style={{ color: theme.colors.text, fontSize: 11 }}>
+                  Planet ID: {planetId}
+                </Text>
+                <Text style={{ color: theme.colors.text, fontSize: 11, marginTop: 4 }}>
+                  Total Fleet Entries: {Object.keys(planet.fleet).length}
+                </Text>
+                <Text style={{ color: theme.colors.text, fontSize: 11 }}>
+                  Ships with count {">"} 0: {Object.entries(planet.fleet).filter(([_, count]) => count > 0).length}
+                </Text>
+                <Text style={{ color: theme.colors.text, fontSize: 11, marginTop: 4 }}>
+                  Fleet Data: {JSON.stringify(planet.fleet, null, 2).substring(0, 200)}...
+                </Text>
+              </View>
+              
               {Object.entries(planet.fleet)
                 .filter(([_, count]) => count > 0)
                 .map(([shipType, maxCount]) => (
@@ -360,6 +390,25 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     </View>
                   </View>
                 ))}
+              
+              {Object.entries(planet.fleet).filter(([_, count]) => count > 0).length === 0 && (
+                <View style={{
+                  backgroundColor: theme.colors.danger + "20",
+                  padding: 16,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: theme.colors.danger + "40",
+                  alignItems: "center",
+                }}>
+                  <Ionicons name="alert-circle" size={32} color={theme.colors.danger} />
+                  <Text style={{ color: theme.colors.danger, fontSize: 14, fontWeight: "600", marginTop: 8, textAlign: "center" }}>
+                    No ships available on {planet.name}
+                  </Text>
+                  <Text style={{ color: theme.colors.text, fontSize: 12, marginTop: 4, textAlign: "center" }}>
+                    Build ships in the Shipyard or select a different planet
+                  </Text>
+                </View>
+              )}
             </View>
           </ScrollView>
           
