@@ -42,6 +42,23 @@ const Tab = createBottomTabNavigator();
 
 function MainTabs() {
   const theme = useThemeStore((state) => state.theme);
+  const missions = useGameStore((state) => state.player.missions || []);
+  const planets = useGameStore((state) => state.player.planets);
+  
+  // Count ready missions
+  const readyMissionsCount = missions.filter((mission) => {
+    if (mission.status !== "available") return false;
+    
+    // Check if all requirements are met
+    return mission.requirements.every((req) => {
+      if (req.type === "buildingLevel" && req.buildingType) {
+        return planets.some(
+          (planet) => planet.buildings[req.buildingType!] >= (req.level || 1)
+        );
+      }
+      return false;
+    });
+  }).length;
   
   return (
     <Tab.Navigator
@@ -79,7 +96,13 @@ function MainTabs() {
       <Tab.Screen name="Galaxy" component={GalaxyScreen} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Stats" component={StatsScreen} />
-      <Tab.Screen name="Missions" component={MissionsScreen} />
+      <Tab.Screen 
+        name="Missions" 
+        component={MissionsScreen}
+        options={{
+          tabBarBadge: readyMissionsCount > 0 ? readyMissionsCount : undefined,
+        }}
+      />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );

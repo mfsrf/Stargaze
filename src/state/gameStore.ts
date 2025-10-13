@@ -1511,8 +1511,18 @@ const useGameStore = create<GameStore>()(
           });
           
           // Mission complete but not yet claimed
-          if (allRequirementsMet) {
-            return mission; // Keep as available, player needs to claim reward
+          if (allRequirementsMet && !mission.readyNotificationSent) {
+            // Send notification that mission is ready
+            get().addMessage({
+              id: uuidv4(),
+              type: "other",
+              title: "🎯 Mission Ready!",
+              content: `Mission "${mission.name}" is ready to claim!\n\nHead to the Missions tab to collect your rewards.`,
+              timestamp: Date.now(),
+              read: false,
+            });
+            
+            return { ...mission, readyNotificationSent: true };
           }
           
           return mission;

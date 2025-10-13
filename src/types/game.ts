@@ -342,4 +342,5 @@ export interface Mission {
   requirements: MissionRequirement[];
   rewards: MissionReward;
   status: MissionStatus;
+  readyNotificationSent?: boolean; // Track if we already sent notification
 }
