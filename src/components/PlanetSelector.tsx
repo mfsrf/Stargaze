@@ -1,7 +1,7 @@
 // PlanetSelector component - horizontal scrollable planet switcher
 
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
@@ -56,20 +56,31 @@ export default function PlanetSelector() {
         animationType="fade"
         onRequestClose={() => setRenameModalVisible(false)}
       >
-        <View style={{ 
-          flex: 1, 
-          backgroundColor: "rgba(0,0,0,0.7)", 
-          justifyContent: "center", 
-          alignItems: "center",
-          padding: 20,
-        }}>
-          <View style={{ 
-            backgroundColor: theme.colors.card, 
-            borderRadius: 16, 
-            padding: 24,
-            width: "100%",
-            maxWidth: 400,
-          }}>
+        <Pressable 
+          style={{ 
+            flex: 1, 
+            backgroundColor: "rgba(0,0,0,0.7)", 
+            justifyContent: "center", 
+            alignItems: "center",
+            padding: 20,
+          }}
+          onPress={() => {
+            // Close modal when backdrop is pressed
+            setRenameModalVisible(false);
+            setRenamingPlanetId(null);
+            setNewPlanetName("");
+          }}
+        >
+          <Pressable 
+            style={{ 
+              backgroundColor: theme.colors.card, 
+              borderRadius: 16, 
+              padding: 24,
+              width: "100%",
+              maxWidth: 400,
+            }}
+            onPress={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+          >
             <View style={{ alignItems: "center", marginBottom: 20 }}>
               <View style={{
                 width: 60,
@@ -151,8 +162,8 @@ export default function PlanetSelector() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
       
       <ScrollView
