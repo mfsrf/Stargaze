@@ -1,6 +1,6 @@
 // ResourceBar component - displays current resources and production rates
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import useGameStore from "../state/gameStore";
@@ -8,16 +8,16 @@ import useThemeStore from "../state/themeStore";
 import { calculatePlanetProduction, formatNumber, calculateStorageCapacity } from "../utils/gameFormulas";
 import { BuildingType } from "../types/game";
 
-export default function ResourceBar() {
+export default React.memo(function ResourceBar() {
   const theme = useThemeStore((state) => state.theme);
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
-  const planets = useGameStore((state) => state.player.planets);
+  const selectedPlanet = useGameStore((state) => 
+    state.player.planets.find((p) => p.id === state.selectedPlanetId)
+  );
   const resourceMultiplier = useGameStore((state) => state.settings.resourceMultiplier);
   const updateResources = useGameStore((state) => state.updateResources);
   
   const [, setTick] = useState(0);
-  
-  const selectedPlanet = planets.find((p) => p.id === selectedPlanetId);
   
   // Update resources every second
   useEffect(() => {
@@ -29,14 +29,23 @@ export default function ResourceBar() {
     return () => clearInterval(interval);
   }, [updateResources]);
   
-  if (!selectedPlanet) return null;
+  // Memoize production calculation
+  const production = useMemo(() => {
+    if (!selectedPlanet) return null;
+    return calculatePlanetProduction(selectedPlanet, resourceMultiplier);
+  }, [selectedPlanet, resourceMultiplier]);
   
-  const production = calculatePlanetProduction(selectedPlanet, resourceMultiplier);
+  // Memoize storage capacities
+  const storageCapacities = useMemo(() => {
+    if (!selectedPlanet) return null;
+    return {
+      metal: calculateStorageCapacity(selectedPlanet.buildings[BuildingType.MetalStorage]),
+      crystal: calculateStorageCapacity(selectedPlanet.buildings[BuildingType.CrystalStorage]),
+      deuterium: calculateStorageCapacity(selectedPlanet.buildings[BuildingType.DeuteriumTank]),
+    };
+  }, [selectedPlanet?.buildings[BuildingType.MetalStorage], selectedPlanet?.buildings[BuildingType.CrystalStorage], selectedPlanet?.buildings[BuildingType.DeuteriumTank]]);
   
-  // Calculate storage capacities
-  const metalCapacity = calculateStorageCapacity(selectedPlanet.buildings[BuildingType.MetalStorage]);
-  const crystalCapacity = calculateStorageCapacity(selectedPlanet.buildings[BuildingType.CrystalStorage]);
-  const deuteriumCapacity = calculateStorageCapacity(selectedPlanet.buildings[BuildingType.DeuteriumTank]);
+  if (!selectedPlanet || !production || !storageCapacities) return null;
   
   const renderResource = (
     name: string,
@@ -87,7 +96,7 @@ export default function ResourceBar() {
         {renderResource(
           "Metal",
           selectedPlanet.resources.metal,
-          metalCapacity,
+          storageCapacities.metal,
           production.metal,
           "hammer",
           theme.colors.metal
@@ -95,7 +104,7 @@ export default function ResourceBar() {
         {renderResource(
           "Crystal",
           selectedPlanet.resources.crystal,
-          crystalCapacity,
+          storageCapacities.crystal,
           production.crystal,
           "diamond",
           theme.colors.crystal
@@ -103,7 +112,7 @@ export default function ResourceBar() {
         {renderResource(
           "Deuterium",
           selectedPlanet.resources.deuterium,
-          deuteriumCapacity,
+          storageCapacities.deuterium,
           production.deuterium,
           "water",
           theme.colors.deuterium
@@ -119,4 +128,4 @@ export default function ResourceBar() {
       </View>
     </View>
   );
-}
+});

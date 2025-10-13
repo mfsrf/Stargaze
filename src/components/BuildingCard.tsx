@@ -1,7 +1,7 @@
 // BuildingCard component - displays building info and upgrade button
 
 import React from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -60,7 +60,7 @@ const BUILDING_COLORS: Record<BuildingType, string[]> = {
   [BuildingType.Terraformer]: ["#66BB6A", "#43A047"],
 };
 
-export default function BuildingCard({ buildingType, planetId }: BuildingCardProps) {
+export default React.memo(function BuildingCard({ buildingType, planetId }: BuildingCardProps) {
   const theme = useThemeStore((state) => state.theme);
   const planet = useGameStore((state) =>
     state.player.planets.find((p) => p.id === planetId)
@@ -286,11 +286,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
               {cost.metal > 0 && (
                 <View style={{ alignItems: "center" }}>
-                  <Image 
-                    source={require("../../assets/metal-icon.png")} 
-                    style={{ width: 14, height: 14 }}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="hammer" size={14} color={theme.colors.metal} />
                   <Text
                     style={{
                       color: planet.resources.metal >= cost.metal ? theme.colors.text : theme.colors.danger,
@@ -421,4 +417,4 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
       )}
     </View>
   );
-}
+});

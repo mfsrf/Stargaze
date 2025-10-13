@@ -75,7 +75,7 @@ const SHIP_CATEGORIES: Record<ShipType, "combat" | "civil"> = {
   [ShipType.Scout]: "civil",
 };
 
-export default function ShipCard({ shipType, planetId }: ShipCardProps) {
+export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProps) {
   const theme = useThemeStore((state) => state.theme);
   const planet = useGameStore((state) =>
     state.player.planets.find((p) => p.id === planetId)
@@ -491,4 +491,4 @@ export default function ShipCard({ shipType, planetId }: ShipCardProps) {
       </TouchableOpacity>
     </View>
   );
-}
+});
