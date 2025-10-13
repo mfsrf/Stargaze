@@ -1,6 +1,6 @@
 // SendFleetModal - modal for sending fleets on missions
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,6 +29,15 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
   const [targetSystem, setTargetSystem] = useState(targetCoordinates?.system.toString() || "1");
   const [targetPosition, setTargetPosition] = useState(targetCoordinates?.position.toString() || "1");
   const [selectedShips, setSelectedShips] = useState<Partial<FleetComposition>>({});
+  
+  // Update target coordinates when prop changes
+  useEffect(() => {
+    if (targetCoordinates) {
+      setTargetGalaxy(targetCoordinates.galaxy.toString());
+      setTargetSystem(targetCoordinates.system.toString());
+      setTargetPosition(targetCoordinates.position.toString());
+    }
+  }, [targetCoordinates]);
   
   if (!planet) return null;
   
@@ -151,23 +160,30 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
               borderBottomColor: theme.colors.border,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "bold" }}>
-              Send Fleet
-            </Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              activeOpacity={0.7}
-              style={{
-                backgroundColor: theme.colors.card,
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="close" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+              <View>
+                <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "bold" }}>
+                  Send Fleet
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                  From: {planet.name} | Ships: {Object.entries(planet.fleet).filter(([_, count]) => count > 0).length} types
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+                style={{
+                  backgroundColor: theme.colors.card,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
           </View>
           
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
