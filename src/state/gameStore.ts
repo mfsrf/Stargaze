@@ -1481,6 +1481,18 @@ const useGameStore = create<GameStore>()(
       // Check missions for completion
       checkMissions: () => {
         const state = get();
+        
+        // Migration: Add missions to old saved games
+        if (!state.player.missions) {
+          set({
+            player: {
+              ...state.player,
+              missions: createInitialMissions(),
+            },
+          });
+          return;
+        }
+        
         const updatedMissions = state.player.missions.map((mission) => {
           if (mission.status === MissionStatus.Completed) return mission;
           
