@@ -328,11 +328,11 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                   <Ionicons name="flash" size={14} color={theme.colors.energy} />
                   <Text
                     style={{
-                      color: theme.colors.danger,
+                      color: theme.colors.text,
                       fontSize: 12,
                     }}
                   >
-                    -{formatNumber(nextLevelEnergyConsumption)}
+                    {formatNumber(nextLevelEnergyConsumption)}
                   </Text>
                 </View>
               )}
