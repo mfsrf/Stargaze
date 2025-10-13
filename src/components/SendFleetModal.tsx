@@ -8,7 +8,7 @@ import * as Haptics from "expo-haptics";
 import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
 import { ShipType, MissionType, FleetComposition, Coordinates } from "../types/game";
-import { SHIP_NAMES } from "../utils/gameConstants";
+import { SHIP_NAMES, SHIP_STATS } from "../utils/gameConstants";
 import { formatNumber } from "../utils/gameFormulas";
 
 interface SendFleetModalProps {
@@ -70,6 +70,15 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
   };
   
   const totalSelectedShips = Object.values(selectedShips).reduce((sum, count) => sum + (count || 0), 0);
+  
+  // Calculate total cargo capacity
+  const totalCargoCapacity = Object.entries(selectedShips).reduce((total, [shipType, count]) => {
+    if (count > 0) {
+      const cargo = SHIP_STATS[shipType as ShipType]?.cargo || 0;
+      return total + (cargo * count);
+    }
+    return total;
+  }, 0);
   
   const canSendFleet = () => {
     if (totalSelectedShips === 0) return false;
@@ -417,9 +426,39 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
             {/* Cargo Selection - Only show for Transport mission */}
             {selectedMission === MissionType.Transport && (
               <View style={{ marginBottom: 20 }}>
-                <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
-                  Resources to Transport
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600" }}>
+                    Resources to Transport
+                  </Text>
+                  <View style={{
+                    backgroundColor: theme.colors.primary + "20",
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                  }}>
+                    <Text style={{ color: theme.colors.primary, fontSize: 11, fontWeight: "700" }}>
+                      Cargo: {formatNumber(totalCargoCapacity)}
+                    </Text>
+                  </View>
+                </View>
+                
+                {totalCargoCapacity === 0 && (
+                  <View style={{
+                    backgroundColor: theme.colors.warning + "20",
+                    padding: 12,
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: theme.colors.warning + "40",
+                  }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="alert-circle" size={16} color={theme.colors.warning} />
+                      <Text style={{ color: theme.colors.warning, fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
+                        Select cargo ships to transport resources
+                      </Text>
+                    </View>
+                  </View>
+                )}
                 
                 {/* Metal */}
                 <View style={{ marginBottom: 12 }}>
@@ -457,17 +496,20 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setCargoMetal(Math.floor(planet.resources.metal).toString());
+                        const maxMetal = Math.min(Math.floor(planet.resources.metal), totalCargoCapacity);
+                        setCargoMetal(maxMetal.toString());
                       }}
                       activeOpacity={0.7}
+                      disabled={totalCargoCapacity === 0}
                       style={{
-                        backgroundColor: theme.colors.primary + "20",
+                        backgroundColor: totalCargoCapacity > 0 ? theme.colors.primary + "20" : theme.colors.border,
                         paddingVertical: 10,
                         paddingHorizontal: 16,
                         borderRadius: 8,
+                        opacity: totalCargoCapacity > 0 ? 1 : 0.5,
                       }}
                     >
-                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                      <Text style={{ color: totalCargoCapacity > 0 ? theme.colors.primary : theme.colors.textSecondary, fontSize: 12, fontWeight: "600" }}>
                         Max
                       </Text>
                     </TouchableOpacity>
@@ -510,17 +552,22 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setCargoCrystal(Math.floor(planet.resources.crystal).toString());
+                        const metalAmount = parseInt(cargoMetal) || 0;
+                        const remainingCapacity = totalCargoCapacity - metalAmount;
+                        const maxCrystal = Math.min(Math.floor(planet.resources.crystal), remainingCapacity);
+                        setCargoCrystal(Math.max(0, maxCrystal).toString());
                       }}
                       activeOpacity={0.7}
+                      disabled={totalCargoCapacity === 0}
                       style={{
-                        backgroundColor: theme.colors.primary + "20",
+                        backgroundColor: totalCargoCapacity > 0 ? theme.colors.primary + "20" : theme.colors.border,
                         paddingVertical: 10,
                         paddingHorizontal: 16,
                         borderRadius: 8,
+                        opacity: totalCargoCapacity > 0 ? 1 : 0.5,
                       }}
                     >
-                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                      <Text style={{ color: totalCargoCapacity > 0 ? theme.colors.primary : theme.colors.textSecondary, fontSize: 12, fontWeight: "600" }}>
                         Max
                       </Text>
                     </TouchableOpacity>
@@ -563,17 +610,23 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setCargoDeuterium(Math.floor(planet.resources.deuterium).toString());
+                        const metalAmount = parseInt(cargoMetal) || 0;
+                        const crystalAmount = parseInt(cargoCrystal) || 0;
+                        const remainingCapacity = totalCargoCapacity - metalAmount - crystalAmount;
+                        const maxDeuterium = Math.min(Math.floor(planet.resources.deuterium), remainingCapacity);
+                        setCargoDeuterium(Math.max(0, maxDeuterium).toString());
                       }}
                       activeOpacity={0.7}
+                      disabled={totalCargoCapacity === 0}
                       style={{
-                        backgroundColor: theme.colors.primary + "20",
+                        backgroundColor: totalCargoCapacity > 0 ? theme.colors.primary + "20" : theme.colors.border,
                         paddingVertical: 10,
                         paddingHorizontal: 16,
                         borderRadius: 8,
+                        opacity: totalCargoCapacity > 0 ? 1 : 0.5,
                       }}
                     >
-                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                      <Text style={{ color: totalCargoCapacity > 0 ? theme.colors.primary : theme.colors.textSecondary, fontSize: 12, fontWeight: "600" }}>
                         Max
                       </Text>
                     </TouchableOpacity>
