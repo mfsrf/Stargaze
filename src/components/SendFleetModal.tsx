@@ -9,6 +9,7 @@ import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
 import { ShipType, MissionType, FleetComposition, Coordinates } from "../types/game";
 import { SHIP_NAMES } from "../utils/gameConstants";
+import { formatNumber } from "../utils/gameFormulas";
 
 interface SendFleetModalProps {
   visible: boolean;
@@ -121,10 +122,21 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
       [ShipType.EspionageProbe]: selectedShips[ShipType.EspionageProbe] || 0,
     };
     
-    sendFleet(planetId, destination, fullFleetComposition, selectedMission);
+    // Prepare cargo for transport missions
+    const cargo = selectedMission === MissionType.Transport ? {
+      metal: parseInt(cargoMetal) || 0,
+      crystal: parseInt(cargoCrystal) || 0,
+      deuterium: parseInt(cargoDeuterium) || 0,
+      energy: 0,
+    } : undefined;
+    
+    sendFleet(planetId, destination, fullFleetComposition, selectedMission, cargo);
     
     // Reset and close
     setSelectedShips({});
+    setCargoMetal("0");
+    setCargoCrystal("0");
+    setCargoDeuterium("0");
     onClose();
   };
   
@@ -401,6 +413,174 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                 </View>
               )}
             </View>
+            
+            {/* Cargo Selection - Only show for Transport mission */}
+            {selectedMission === MissionType.Transport && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
+                  Resources to Transport
+                </Text>
+                
+                {/* Metal */}
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="hammer" size={16} color={theme.colors.metal} style={{ marginRight: 6 }} />
+                      <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                        Metal
+                      </Text>
+                    </View>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                      Available: {formatNumber(planet.resources.metal)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.card,
+                        color: theme.colors.text,
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        fontSize: 14,
+                        textAlign: "center",
+                      }}
+                      value={cargoMetal}
+                      onChangeText={setCargoMetal}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.textSecondary}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setCargoMetal(Math.floor(planet.resources.metal).toString());
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                        Max
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Crystal */}
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="diamond" size={16} color={theme.colors.crystal} style={{ marginRight: 6 }} />
+                      <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                        Crystal
+                      </Text>
+                    </View>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                      Available: {formatNumber(planet.resources.crystal)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.card,
+                        color: theme.colors.text,
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        fontSize: 14,
+                        textAlign: "center",
+                      }}
+                      value={cargoCrystal}
+                      onChangeText={setCargoCrystal}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.textSecondary}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setCargoCrystal(Math.floor(planet.resources.crystal).toString());
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                        Max
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Deuterium */}
+                <View style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="water" size={16} color={theme.colors.deuterium} style={{ marginRight: 6 }} />
+                      <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600" }}>
+                        Deuterium
+                      </Text>
+                    </View>
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                      Available: {formatNumber(planet.resources.deuterium)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.card,
+                        color: theme.colors.text,
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        fontSize: 14,
+                        textAlign: "center",
+                      }}
+                      value={cargoDeuterium}
+                      onChangeText={setCargoDeuterium}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.textSecondary}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setCargoDeuterium(Math.floor(planet.resources.deuterium).toString());
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+                        Max
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
           </ScrollView>
           
           {/* Send Button */}
