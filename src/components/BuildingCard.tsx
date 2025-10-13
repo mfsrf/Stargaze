@@ -1,7 +1,7 @@
 // BuildingCard component - displays building info and upgrade button
 
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -286,7 +286,11 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
             <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
               {cost.metal > 0 && (
                 <View style={{ alignItems: "center" }}>
-                  <Ionicons name="hammer" size={14} color={theme.colors.metal} />
+                  <Image 
+                    source={require("../../assets/metal-icon.png")} 
+                    style={{ width: 14, height: 14 }}
+                    resizeMode="contain"
+                  />
                   <Text
                     style={{
                       color: planet.resources.metal >= cost.metal ? theme.colors.text : theme.colors.danger,
@@ -323,6 +327,19 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                   </Text>
                 </View>
               )}
+              {isMine && nextLevelEnergyConsumption > 0 && (
+                <View style={{ alignItems: "center" }}>
+                  <Ionicons name="flash" size={14} color={theme.colors.energy} />
+                  <Text
+                    style={{
+                      color: theme.colors.danger,
+                      fontSize: 12,
+                    }}
+                  >
+                    -{formatNumber(nextLevelEnergyConsumption)}
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
               <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>
@@ -342,27 +359,6 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                 </View>
               )}
             </View>
-            
-            {/* Energy Consumption for Mines */}
-            {isMine && nextLevelEnergyConsumption > 0 && (
-              <View style={{ 
-                flexDirection: "row", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                marginTop: 8,
-                paddingTop: 8,
-                borderTopWidth: 1,
-                borderTopColor: theme.colors.border,
-              }}>
-                <Ionicons name="flash" size={12} color={theme.colors.energy} />
-                <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginLeft: 4 }}>
-                  Energy consumption: 
-                </Text>
-                <Text style={{ color: theme.colors.danger, fontSize: 10, fontWeight: "600", marginLeft: 4 }}>
-                  -{formatNumber(nextLevelEnergyConsumption)}/h
-                </Text>
-              </View>
-            )}
           </View>
           
           <TouchableOpacity
