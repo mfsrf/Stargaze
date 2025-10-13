@@ -262,6 +262,13 @@ export interface AIPlayer {
   lastActionTime: number;
   strategy: "defensive" | "balanced" | "aggressive";
   targetPlayer?: string;
+  personality: {
+    aggression: number; // 0-1: How likely to attack
+    expansion: number; // 0-1: Priority for colonization
+    economy: number; // 0-1: Focus on resource production
+    technology: number; // 0-1: Research priority
+    riskTolerance: number; // 0-1: Willingness to take risks
+  };
 }
 
 export interface Player {

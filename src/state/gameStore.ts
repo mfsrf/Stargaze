@@ -92,6 +92,9 @@ interface GameStore extends GameState {
   markMessageAsRead: (messageId: string) => void;
   deleteMessage: (messageId: string) => void;
   
+  // AI management
+  updateAI: () => void;
+  
   // Settings
   updateSettings: (settings: Partial<GameSettings>) => void;
   
@@ -261,6 +264,36 @@ const useGameStore = create<GameStore>()(
             aiPlanet.buildings[BuildingType.RoboticsFactory] = 1;
           }
           
+          // Assign strategy and generate personality
+          const strategy = strategies[i % strategies.length];
+          let personality;
+          
+          if (strategy === "aggressive") {
+            personality = {
+              aggression: 0.7 + Math.random() * 0.3, // 0.7-1.0
+              expansion: 0.4 + Math.random() * 0.3, // 0.4-0.7
+              economy: 0.3 + Math.random() * 0.3, // 0.3-0.6
+              technology: 0.4 + Math.random() * 0.2, // 0.4-0.6
+              riskTolerance: 0.7 + Math.random() * 0.3, // 0.7-1.0
+            };
+          } else if (strategy === "defensive") {
+            personality = {
+              aggression: 0.1 + Math.random() * 0.2, // 0.1-0.3
+              expansion: 0.5 + Math.random() * 0.3, // 0.5-0.8
+              economy: 0.7 + Math.random() * 0.3, // 0.7-1.0
+              technology: 0.6 + Math.random() * 0.3, // 0.6-0.9
+              riskTolerance: 0.1 + Math.random() * 0.3, // 0.1-0.4
+            };
+          } else { // balanced
+            personality = {
+              aggression: 0.4 + Math.random() * 0.3, // 0.4-0.7
+              expansion: 0.5 + Math.random() * 0.3, // 0.5-0.8
+              economy: 0.5 + Math.random() * 0.3, // 0.5-0.8
+              technology: 0.5 + Math.random() * 0.3, // 0.5-0.8
+              riskTolerance: 0.4 + Math.random() * 0.3, // 0.4-0.7
+            };
+          }
+          
           const aiPlayer: AIPlayer = {
             id: aiId,
             name: aiNames[i],
@@ -269,8 +302,9 @@ const useGameStore = create<GameStore>()(
             technologies: { ...INITIAL_TECHNOLOGIES },
             fleets: [],
             lastActionTime: Date.now(),
-            strategy: strategies[i % strategies.length],
+            strategy,
             targetPlayer: undefined,
+            personality,
           };
           
           aiPlayers.push(aiPlayer);
@@ -892,6 +926,9 @@ const useGameStore = create<GameStore>()(
           researchQueue: updatedResearchQueue,
           lastUpdate: currentTime,
         });
+        
+        // Update AI after player resources
+        get().updateAI();
       },
       
       // Upgrade building
@@ -1373,6 +1410,181 @@ const useGameStore = create<GameStore>()(
             ...state.player,
             planets: updatedPlanets,
           },
+        });
+      },
+      
+      // AI Update Logic
+      updateAI: () => {
+        const state = get();
+        const currentTime = Date.now();
+        
+        const updatedAIPlayers = state.aiPlayers.map((ai) => {
+          // Only update AI every 30 seconds to 2 minutes based on difficulty
+          const updateInterval = ai.difficulty === "easy" ? 120000 : ai.difficulty === "medium" ? 60000 : 30000;
+          if (currentTime - ai.lastActionTime < updateInterval) {
+            return ai;
+          }
+          
+          let updatedAI = { ...ai, lastActionTime: currentTime };
+          
+          // Update AI resources for all planets
+          updatedAI.planets = updatedAI.planets.map((planet) => {
+            const production = calculatePlanetProduction(planet, state.settings.resourceMultiplier);
+            const timeDelta = (currentTime - planet.lastUpdate) / 1000;
+            const productionPerSecond = {
+              metal: production.metal / 3600,
+              crystal: production.crystal / 3600,
+              deuterium: production.deuterium / 3600,
+              energy: production.energy,
+            };
+            
+            // Calculate storage capacities
+            const metalCap = calculateStorageCapacity(planet.buildings[BuildingType.MetalStorage]);
+            const crystalCap = calculateStorageCapacity(planet.buildings[BuildingType.CrystalStorage]);
+            const deuteriumCap = calculateStorageCapacity(planet.buildings[BuildingType.DeuteriumTank]);
+            
+            return {
+              ...planet,
+              resources: {
+                metal: Math.min(planet.resources.metal + productionPerSecond.metal * timeDelta, metalCap),
+                crystal: Math.min(planet.resources.crystal + productionPerSecond.crystal * timeDelta, crystalCap),
+                deuterium: Math.min(planet.resources.deuterium + productionPerSecond.deuterium * timeDelta, deuteriumCap),
+                energy: productionPerSecond.energy,
+              },
+              lastUpdate: currentTime,
+            };
+          });
+          
+          // AI Decision Making
+          const mainPlanet = updatedAI.planets[0];
+          if (!mainPlanet) return updatedAI;
+          
+          // 1. Build Economy (if personality.economy is high)
+          if (Math.random() < updatedAI.personality.economy) {
+            const economyBuildings = [
+              BuildingType.MetalMine,
+              BuildingType.CrystalMine,
+              BuildingType.DeuteriumSynthesizer,
+              BuildingType.SolarPlant,
+            ];
+            
+            for (const buildingType of economyBuildings) {
+              if (mainPlanet.constructionQueue) break;
+              
+              const currentLevel = mainPlanet.buildings[buildingType];
+              const cost = getBuildingCost(buildingType, currentLevel);
+              
+              if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+                updatedAI.planets[0] = {
+                  ...mainPlanet,
+                  resources: deductCost(mainPlanet.resources, cost),
+                  constructionQueue: {
+                    type: buildingType,
+                    startTime: currentTime,
+                    endTime: currentTime + 60000, // 1 minute for AI
+                  },
+                };
+                break;
+              }
+            }
+          }
+          
+          // 2. Build Military (if personality.aggression is high)
+          if (Math.random() < updatedAI.personality.aggression && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
+            const shipType = ai.strategy === "aggressive" ? ShipType.LightFighter : ShipType.SmallCargo;
+            const shipCost = SHIP_BASE_COSTS[shipType];
+            const quantity = Math.floor(mainPlanet.resources.metal / shipCost.metal);
+            
+            if (quantity > 0 && quantity <= 10) {
+              const totalCost = {
+                metal: shipCost.metal * quantity,
+                crystal: shipCost.crystal * quantity,
+                deuterium: shipCost.deuterium * quantity,
+                energy: 0,
+              };
+              
+              if (canAfford(mainPlanet.resources, totalCost)) {
+                updatedAI.planets[0] = {
+                  ...mainPlanet,
+                  resources: deductCost(mainPlanet.resources, totalCost),
+                  fleet: {
+                    ...mainPlanet.fleet,
+                    [shipType]: mainPlanet.fleet[shipType] + quantity,
+                  },
+                };
+              }
+            }
+          }
+          
+          // 3. Send Attack Fleet (if aggressive and has enough ships)
+          if (Math.random() < updatedAI.personality.aggression * 0.5) {
+            const totalFighters = mainPlanet.fleet[ShipType.LightFighter] + mainPlanet.fleet[ShipType.HeavyFighter];
+            
+            if (totalFighters >= 10) {
+              // Find a target (player's weakest planet)
+              const targetPlanet = state.player.planets.reduce((weakest, planet) => {
+                const planetFleet = Object.values(planet.fleet).reduce((sum, count) => sum + count, 0);
+                const weakestFleet = Object.values(weakest.fleet).reduce((sum, count) => sum + count, 0);
+                return planetFleet < weakestFleet ? planet : weakest;
+              });
+              
+              // Calculate risk
+              const targetDefense = Object.values(targetPlanet.fleet).reduce((sum, count) => sum + count, 0);
+              const riskLevel = targetDefense / totalFighters;
+              
+              // Only attack if risk is acceptable based on personality
+              if (riskLevel < (1 - updatedAI.personality.riskTolerance) * 2) {
+                const attackShips: FleetComposition = {
+                  ...INITIAL_FLEET,
+                  [ShipType.LightFighter]: Math.floor(mainPlanet.fleet[ShipType.LightFighter] * 0.7),
+                  [ShipType.HeavyFighter]: Math.floor(mainPlanet.fleet[ShipType.HeavyFighter] * 0.7),
+                };
+                
+                // Create AI fleet
+                const newFleet: Fleet = {
+                  id: uuidv4(),
+                  ships: attackShips,
+                  mission: MissionType.Attack,
+                  origin: mainPlanet.coordinates,
+                  destination: targetPlanet.coordinates,
+                  departureTime: currentTime,
+                  arrivalTime: currentTime + 60000, // 1 minute travel
+                  returnTime: currentTime + 120000, // Return after 2 minutes
+                  isReturning: false,
+                  ownerId: ai.id,
+                };
+                
+                // Deduct ships from AI planet
+                updatedAI.planets[0] = {
+                  ...mainPlanet,
+                  fleet: {
+                    ...mainPlanet.fleet,
+                    [ShipType.LightFighter]: mainPlanet.fleet[ShipType.LightFighter] - attackShips[ShipType.LightFighter],
+                    [ShipType.HeavyFighter]: mainPlanet.fleet[ShipType.HeavyFighter] - attackShips[ShipType.HeavyFighter],
+                  },
+                };
+                
+                updatedAI.fleets = [...updatedAI.fleets, newFleet];
+                updatedAI.targetPlayer = state.player.id;
+                
+                // Send notification to player
+                get().addMessage({
+                  id: uuidv4(),
+                  type: "other",
+                  title: `⚠️ Incoming Attack!`,
+                  content: `${ai.name} is sending an attack fleet to ${targetPlanet.name}!\n\n📍 Target: [${targetPlanet.coordinates.galaxy}:${targetPlanet.coordinates.system}:${targetPlanet.coordinates.position}]\n🚀 Enemy Fleet: ${attackShips[ShipType.LightFighter]} Light Fighters, ${attackShips[ShipType.HeavyFighter]} Heavy Fighters\n⏰ Arrival: ~1 minute\n\nPrepare your defenses!`,
+                  timestamp: currentTime,
+                  read: false,
+                });
+              }
+            }
+          }
+          
+          return updatedAI;
+        });
+        
+        set({
+          aiPlayers: updatedAIPlayers,
         });
       },
     }),
