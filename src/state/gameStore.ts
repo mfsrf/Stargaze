@@ -135,6 +135,7 @@ const useGameStore = create<GameStore>()(
         technologies: { ...INITIAL_TECHNOLOGIES },
         fleets: [],
         messages: [],
+        exploredSystems: [],
         totalPoints: 0,
         economyPoints: 0,
         researchPoints: 0,
@@ -174,6 +175,7 @@ const useGameStore = create<GameStore>()(
           technologies: { ...INITIAL_TECHNOLOGIES },
           fleets: [],
           messages: [],
+          exploredSystems: [`${startCoordinates.galaxy}:${startCoordinates.system}`], // Start with home system explored
           totalPoints: 0,
           economyPoints: 0,
           researchPoints: 0,
@@ -289,6 +291,7 @@ const useGameStore = create<GameStore>()(
             technologies: { ...INITIAL_TECHNOLOGIES },
             fleets: [],
             messages: [],
+            exploredSystems: [],
             totalPoints: 0,
             economyPoints: 0,
             researchPoints: 0,

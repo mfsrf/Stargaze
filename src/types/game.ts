@@ -271,6 +271,7 @@ export interface Player {
   technologies: TechnologyLevels;
   fleets: Fleet[];
   messages: Message[];
+  exploredSystems: string[]; // Format: "galaxy:system"
   totalPoints: number;
   economyPoints: number;
   researchPoints: number;

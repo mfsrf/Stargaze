@@ -29,6 +29,9 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
   const [targetSystem, setTargetSystem] = useState(targetCoordinates?.system.toString() || "1");
   const [targetPosition, setTargetPosition] = useState(targetCoordinates?.position.toString() || "1");
   const [selectedShips, setSelectedShips] = useState<Partial<FleetComposition>>({});
+  const [cargoMetal, setCargoMetal] = useState("0");
+  const [cargoCrystal, setCargoCrystal] = useState("0");
+  const [cargoDeuterium, setCargoDeuterium] = useState("0");
   
   // Update target coordinates when prop changes
   useEffect(() => {
