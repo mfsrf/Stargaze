@@ -10,6 +10,7 @@ import {
   TechnologyLevels,
   FleetComposition,
   DefenseComposition,
+  PlanetType,
 } from "../types/game";
 
 // Base costs for buildings (metal, crystal, deuterium)
@@ -325,4 +326,124 @@ export const SHIP_PREREQUISITES: Partial<Record<ShipType, Partial<TechnologyLeve
   [ShipType.Bomber]: { [BuildingType.Shipyard]: 8, [TechnologyType.ImpulseDrive]: 6, [TechnologyType.PlasmaTech]: 5 },
   [ShipType.Destroyer]: { [BuildingType.Shipyard]: 9, [TechnologyType.HyperspaceDrive]: 6, [TechnologyType.HyperspaceTech]: 5 },
   [ShipType.Deathstar]: { [BuildingType.Shipyard]: 12, [TechnologyType.HyperspaceDrive]: 7, [TechnologyType.HyperspaceTech]: 6, [TechnologyType.WeaponsTech]: 12 },
+};
+
+// Planet type bonuses/penalties (multipliers)
+export interface PlanetTypeBonus {
+  metal: number;      // Metal production multiplier
+  crystal: number;    // Crystal production multiplier
+  deuterium: number;  // Deuterium production multiplier
+  energy: number;     // Energy production multiplier
+  description: string;
+  color: string;      // Color for UI
+}
+
+export const PLANET_TYPE_BONUSES: Record<PlanetType, PlanetTypeBonus> = {
+  // Original types (balanced)
+  [PlanetType.Frozen]: {
+    metal: 0.9,
+    crystal: 1.0,
+    deuterium: 1.1,
+    energy: 0.9,
+    description: "Cold climate increases deuterium production",
+    color: "#B3E5FC",
+  },
+  [PlanetType.Desert]: {
+    metal: 1.0,
+    crystal: 0.9,
+    deuterium: 0.8,
+    energy: 1.2,
+    description: "Abundant sunlight boosts energy production",
+    color: "#FFCC80",
+  },
+  [PlanetType.Jungle]: {
+    metal: 0.9,
+    crystal: 1.1,
+    deuterium: 1.0,
+    energy: 1.0,
+    description: "Rich minerals increase crystal production",
+    color: "#A5D6A7",
+  },
+  [PlanetType.Normal]: {
+    metal: 1.0,
+    crystal: 1.0,
+    deuterium: 1.0,
+    energy: 1.0,
+    description: "Balanced production across all resources",
+    color: "#90CAF9",
+  },
+  [PlanetType.Water]: {
+    metal: 0.8,
+    crystal: 0.9,
+    deuterium: 1.3,
+    energy: 1.0,
+    description: "Ocean worlds excel at deuterium extraction",
+    color: "#4FC3F7",
+  },
+  
+  // Special types (extreme bonuses/penalties)
+  [PlanetType.Toxic]: {
+    metal: 1.5,
+    crystal: 0.7,
+    deuterium: 0.9,
+    energy: 1.0,
+    description: "Toxic atmosphere rich in heavy metals",
+    color: "#9CCC65",
+  },
+  [PlanetType.NoAtmosphere]: {
+    metal: 0.9,
+    crystal: 1.0,
+    deuterium: 0.6,
+    energy: 1.5,
+    description: "No atmosphere allows maximum solar energy",
+    color: "#B0BEC5",
+  },
+  [PlanetType.Ocean]: {
+    metal: 0.6,
+    crystal: 0.8,
+    deuterium: 1.6,
+    energy: 0.9,
+    description: "Deep oceans provide abundant deuterium",
+    color: "#0288D1",
+  },
+  [PlanetType.GasGiant]: {
+    metal: 0.3,
+    crystal: 1.8,
+    deuterium: 0.5,
+    energy: 0.8,
+    description: "Atmospheric crystals but no solid surface",
+    color: "#CE93D8",
+  },
+  [PlanetType.Volcanic]: {
+    metal: 1.4,
+    crystal: 0.8,
+    deuterium: 0.7,
+    energy: 1.4,
+    description: "Volcanic activity provides heat and metals",
+    color: "#FF7043",
+  },
+  [PlanetType.Barren]: {
+    metal: 0.7,
+    crystal: 0.7,
+    deuterium: 0.7,
+    energy: 0.8,
+    description: "Depleted world with reduced all resources",
+    color: "#8D6E63",
+  },
+  [PlanetType.Ice]: {
+    metal: 0.8,
+    crystal: 1.0,
+    deuterium: 1.5,
+    energy: 0.6,
+    description: "Frozen water provides deuterium but limits energy",
+    color: "#80DEEA",
+  },
+  [PlanetType.Lava]: {
+    metal: 1.6,
+    crystal: 0.9,
+    deuterium: 0.3,
+    energy: 1.5,
+    description: "Molten surface rich in metals and thermal energy",
+    color: "#F4511E",
+  },
 };

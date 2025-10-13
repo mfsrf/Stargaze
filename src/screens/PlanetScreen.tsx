@@ -14,7 +14,7 @@ import ShipCard from "../components/ShipCard";
 import DefenseCard from "../components/DefenseCard";
 import SendFleetModal from "../components/SendFleetModal";
 import { BuildingType, TechnologyType, ShipType, MissionType, DefenseType } from "../types/game";
-import { SHIP_STATS, SHIP_NAMES } from "../utils/gameConstants";
+import { SHIP_STATS, SHIP_NAMES, PLANET_TYPE_BONUSES } from "../utils/gameConstants";
 import { 
   formatNumber, 
   calculateShipSpeed, 
@@ -22,6 +22,7 @@ import {
   calculateShieldPower,
   calculateArmorPower,
 } from "../utils/gameFormulas";
+import { getPlanetTypeName, getPlanetTypeColor } from "../utils/galaxyManager";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
@@ -103,6 +104,112 @@ function BuildingsTab() {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       contentContainerStyle={{ padding: 16 }}
     >
+      {/* Planet Type Info */}
+      <View style={{ 
+        backgroundColor: theme.colors.card, 
+        borderRadius: 12, 
+        padding: 16, 
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+      }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+          <Ionicons name="planet" size={24} color={getPlanetTypeColor(planet.type)} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "bold" }}>
+              {getPlanetTypeName(planet.type)} Planet
+            </Text>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+              {PLANET_TYPE_BONUSES[planet.type].description}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Production Bonuses */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {PLANET_TYPE_BONUSES[planet.type].metal !== 1.0 && (
+            <View style={{ 
+              flexDirection: "row", 
+              alignItems: "center",
+              backgroundColor: PLANET_TYPE_BONUSES[planet.type].metal > 1.0 ? theme.colors.success + "20" : theme.colors.danger + "20",
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+            }}>
+              <Ionicons name="hammer" size={12} color={theme.colors.metal} />
+              <Text style={{ 
+                color: PLANET_TYPE_BONUSES[planet.type].metal > 1.0 ? theme.colors.success : theme.colors.danger, 
+                fontSize: 11, 
+                fontWeight: "600",
+                marginLeft: 4,
+              }}>
+                {PLANET_TYPE_BONUSES[planet.type].metal > 1.0 ? "+" : ""}{Math.round((PLANET_TYPE_BONUSES[planet.type].metal - 1.0) * 100)}%
+              </Text>
+            </View>
+          )}
+          {PLANET_TYPE_BONUSES[planet.type].crystal !== 1.0 && (
+            <View style={{ 
+              flexDirection: "row", 
+              alignItems: "center",
+              backgroundColor: PLANET_TYPE_BONUSES[planet.type].crystal > 1.0 ? theme.colors.success + "20" : theme.colors.danger + "20",
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+            }}>
+              <Ionicons name="diamond" size={12} color={theme.colors.crystal} />
+              <Text style={{ 
+                color: PLANET_TYPE_BONUSES[planet.type].crystal > 1.0 ? theme.colors.success : theme.colors.danger, 
+                fontSize: 11, 
+                fontWeight: "600",
+                marginLeft: 4,
+              }}>
+                {PLANET_TYPE_BONUSES[planet.type].crystal > 1.0 ? "+" : ""}{Math.round((PLANET_TYPE_BONUSES[planet.type].crystal - 1.0) * 100)}%
+              </Text>
+            </View>
+          )}
+          {PLANET_TYPE_BONUSES[planet.type].deuterium !== 1.0 && (
+            <View style={{ 
+              flexDirection: "row", 
+              alignItems: "center",
+              backgroundColor: PLANET_TYPE_BONUSES[planet.type].deuterium > 1.0 ? theme.colors.success + "20" : theme.colors.danger + "20",
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+            }}>
+              <Ionicons name="water" size={12} color={theme.colors.deuterium} />
+              <Text style={{ 
+                color: PLANET_TYPE_BONUSES[planet.type].deuterium > 1.0 ? theme.colors.success : theme.colors.danger, 
+                fontSize: 11, 
+                fontWeight: "600",
+                marginLeft: 4,
+              }}>
+                {PLANET_TYPE_BONUSES[planet.type].deuterium > 1.0 ? "+" : ""}{Math.round((PLANET_TYPE_BONUSES[planet.type].deuterium - 1.0) * 100)}%
+              </Text>
+            </View>
+          )}
+          {PLANET_TYPE_BONUSES[planet.type].energy !== 1.0 && (
+            <View style={{ 
+              flexDirection: "row", 
+              alignItems: "center",
+              backgroundColor: PLANET_TYPE_BONUSES[planet.type].energy > 1.0 ? theme.colors.success + "20" : theme.colors.danger + "20",
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 6,
+            }}>
+              <Ionicons name="flash" size={12} color={theme.colors.energy} />
+              <Text style={{ 
+                color: PLANET_TYPE_BONUSES[planet.type].energy > 1.0 ? theme.colors.success : theme.colors.danger, 
+                fontSize: 11, 
+                fontWeight: "600",
+                marginLeft: 4,
+              }}>
+                {PLANET_TYPE_BONUSES[planet.type].energy > 1.0 ? "+" : ""}{Math.round((PLANET_TYPE_BONUSES[planet.type].energy - 1.0) * 100)}%
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+      
       <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
         Resource Production
       </Text>

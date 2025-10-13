@@ -14,8 +14,12 @@ import {
   canAfford,
   formatNumber,
   formatDuration,
+  calculateMetalProduction,
+  calculateCrystalProduction,
+  calculateDeuteriumProduction,
+  calculateEnergyProduction,
 } from "../utils/gameFormulas";
-import { BUILDING_NAMES } from "../utils/gameConstants";
+import { BUILDING_NAMES, PLANET_TYPE_BONUSES } from "../utils/gameConstants";
 
 interface BuildingCardProps {
   buildingType: BuildingType;
@@ -64,6 +68,7 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
   const upgradeBuilding = useGameStore((state) => state.upgradeBuilding);
   const instantBuild = useGameStore((state) => state.settings.instantBuild);
   const finishConstruction = useGameStore((state) => state.finishConstruction);
+  const resourceMultiplier = useGameStore((state) => state.settings.resourceMultiplier);
   
   if (!planet) return null;
   
@@ -75,6 +80,43 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
     planet.buildings[BuildingType.RoboticsFactory],
     planet.buildings[BuildingType.NaniteFactory]
   );
+  
+  // Calculate production info for resource buildings
+  let productionInfo: { amount: number; bonus: number } | null = null;
+  if (currentLevel > 0) {
+    const planetBonus = PLANET_TYPE_BONUSES[planet.type];
+    switch (buildingType) {
+      case BuildingType.MetalMine:
+        productionInfo = {
+          amount: calculateMetalProduction(currentLevel, resourceMultiplier, 100, planet.type),
+          bonus: planetBonus.metal,
+        };
+        break;
+      case BuildingType.CrystalMine:
+        productionInfo = {
+          amount: calculateCrystalProduction(currentLevel, resourceMultiplier, 100, planet.type),
+          bonus: planetBonus.crystal,
+        };
+        break;
+      case BuildingType.DeuteriumSynthesizer:
+        productionInfo = {
+          amount: calculateDeuteriumProduction(currentLevel, resourceMultiplier, 100, planet.type),
+          bonus: planetBonus.deuterium,
+        };
+        break;
+      case BuildingType.SolarPlant:
+      case BuildingType.FusionReactor:
+        productionInfo = {
+          amount: calculateEnergyProduction(
+            buildingType === BuildingType.SolarPlant ? currentLevel : 0,
+            buildingType === BuildingType.FusionReactor ? currentLevel : 0,
+            planet.type
+          ),
+          bonus: planetBonus.energy,
+        };
+        break;
+    }
+  }
   
   const isUnderConstruction =
     planet.constructionQueue?.type === buildingType;
@@ -160,6 +202,31 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
               </View>
             )}
           </View>
+          {/* Production Info */}
+          {productionInfo && (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                {formatNumber(productionInfo.amount)}/h
+              </Text>
+              {productionInfo.bonus !== 1.0 && (
+                <View style={{ 
+                  marginLeft: 6,
+                  backgroundColor: productionInfo.bonus > 1.0 ? theme.colors.success + "15" : theme.colors.danger + "15",
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  borderRadius: 3,
+                }}>
+                  <Text style={{ 
+                    color: productionInfo.bonus > 1.0 ? theme.colors.success : theme.colors.danger, 
+                    fontSize: 9, 
+                    fontWeight: "600" 
+                  }}>
+                    {productionInfo.bonus > 1.0 ? "+" : ""}{Math.round((productionInfo.bonus - 1.0) * 100)}%
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </View>
       

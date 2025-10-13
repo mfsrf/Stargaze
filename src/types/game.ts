@@ -157,11 +157,22 @@ export interface ResearchQueue {
 }
 
 export enum PlanetType {
+  // Standard planets (original)
   Frozen = "frozen",        // Positions 1-3
   Desert = "desert",        // Positions 4-6
   Jungle = "jungle",        // Positions 7-9
   Normal = "normal",        // Positions 10-12
   Water = "water",          // Positions 13-15
+  
+  // Special planets (new)
+  Toxic = "toxic",          // High metal, reduced crystal
+  NoAtmosphere = "noAtmosphere", // High energy, reduced deuterium
+  Ocean = "ocean",          // High deuterium, reduced metal
+  GasGiant = "gasGiant",    // High crystal, no metal/deuterium
+  Volcanic = "volcanic",    // High energy, high metal, reduced crystal
+  Barren = "barren",        // Reduced all resources
+  Ice = "ice",              // High deuterium, reduced energy
+  Lava = "lava",            // High metal, high energy, no deuterium
 }
 
 export interface Planet {

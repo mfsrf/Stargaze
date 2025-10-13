@@ -1,12 +1,31 @@
 // Galaxy manager - handles universe generation and exploration
 
 import { Coordinates, GalaxyPosition, Planet, PlanetType } from "../types/game";
-import { GALAXY_CONFIG } from "./gameConstants";
+import { GALAXY_CONFIG, PLANET_TYPE_BONUSES } from "./gameConstants";
 
 /**
- * Determine planet type based on position (distance from sun)
+ * Determine planet type based on position (distance from sun) with randomization
  */
 export function getPlanetType(position: number): PlanetType {
+  // 20% chance for special planet type
+  const random = Math.random();
+  
+  if (random < 0.20) {
+    // Special planet types (20% chance)
+    const specialTypes = [
+      PlanetType.Toxic,
+      PlanetType.NoAtmosphere,
+      PlanetType.Ocean,
+      PlanetType.GasGiant,
+      PlanetType.Volcanic,
+      PlanetType.Barren,
+      PlanetType.Ice,
+      PlanetType.Lava,
+    ];
+    return specialTypes[Math.floor(Math.random() * specialTypes.length)];
+  }
+  
+  // Standard planet types based on position (80% chance)
   if (position >= 1 && position <= 3) return PlanetType.Frozen;
   if (position >= 4 && position <= 6) return PlanetType.Desert;
   if (position >= 7 && position <= 9) return PlanetType.Jungle;
@@ -23,7 +42,15 @@ export function getPlanetTypeName(type: PlanetType): string {
     [PlanetType.Desert]: "Desert Planet",
     [PlanetType.Jungle]: "Jungle Planet",
     [PlanetType.Normal]: "Normal Planet",
-    [PlanetType.Water]: "Ocean Planet",
+    [PlanetType.Water]: "Water Planet",
+    [PlanetType.Toxic]: "Toxic Planet",
+    [PlanetType.NoAtmosphere]: "Airless Planet",
+    [PlanetType.Ocean]: "Ocean World",
+    [PlanetType.GasGiant]: "Gas Giant",
+    [PlanetType.Volcanic]: "Volcanic Planet",
+    [PlanetType.Barren]: "Barren World",
+    [PlanetType.Ice]: "Ice Planet",
+    [PlanetType.Lava]: "Lava World",
   };
   return names[type];
 }
@@ -32,28 +59,14 @@ export function getPlanetTypeName(type: PlanetType): string {
  * Get planet type description
  */
 export function getPlanetTypeDescription(type: PlanetType): string {
-  const descriptions: Record<PlanetType, string> = {
-    [PlanetType.Frozen]: "Far from the sun, icy and cold. Less energy but good metal deposits.",
-    [PlanetType.Desert]: "Hot and dry, excellent for solar energy production.",
-    [PlanetType.Jungle]: "Moderate temperature, balanced resource production.",
-    [PlanetType.Normal]: "Ideal conditions for all types of production.",
-    [PlanetType.Water]: "Close to the sun, hot with vast oceans. Good for deuterium.",
-  };
-  return descriptions[type];
+  return PLANET_TYPE_BONUSES[type].description;
 }
 
 /**
  * Get planet type color
  */
 export function getPlanetTypeColor(type: PlanetType): string {
-  const colors: Record<PlanetType, string> = {
-    [PlanetType.Frozen]: "#64B5F6",    // Light blue
-    [PlanetType.Desert]: "#FFB74D",    // Orange
-    [PlanetType.Jungle]: "#66BB6A",    // Green
-    [PlanetType.Normal]: "#78909C",    // Blue-grey
-    [PlanetType.Water]: "#4FC3F7",     // Cyan
-  };
-  return colors[type];
+  return PLANET_TYPE_BONUSES[type].color;
 }
 
 /**
@@ -75,14 +88,12 @@ export function getPlanetResourceBonus(type: PlanetType): {
   deuterium: number;
   energy: number;
 } {
-  const bonuses: Record<PlanetType, { metal: number; crystal: number; deuterium: number; energy: number }> = {
-    [PlanetType.Frozen]: { metal: 1.1, crystal: 1.0, deuterium: 0.9, energy: 0.8 },
-    [PlanetType.Desert]: { metal: 1.0, crystal: 1.1, deuterium: 0.8, energy: 1.2 },
-    [PlanetType.Jungle]: { metal: 1.0, crystal: 1.0, deuterium: 1.0, energy: 1.0 },
-    [PlanetType.Normal]: { metal: 1.0, crystal: 1.0, deuterium: 1.0, energy: 1.0 },
-    [PlanetType.Water]: { metal: 0.9, crystal: 0.9, deuterium: 1.2, energy: 1.1 },
+  return {
+    metal: PLANET_TYPE_BONUSES[type].metal,
+    crystal: PLANET_TYPE_BONUSES[type].crystal,
+    deuterium: PLANET_TYPE_BONUSES[type].deuterium,
+    energy: PLANET_TYPE_BONUSES[type].energy,
   };
-  return bonuses[type];
 }
 
 /**
