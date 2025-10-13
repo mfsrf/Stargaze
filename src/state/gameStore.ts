@@ -1419,6 +1419,37 @@ const useGameStore = create<GameStore>()(
         const currentTime = Date.now();
         
         const updatedAIPlayers = state.aiPlayers.map((ai) => {
+          // Migrate old AI without personality (for saved games)
+          if (!ai.personality) {
+            let personality;
+            if (ai.strategy === "aggressive") {
+              personality = {
+                aggression: 0.7 + Math.random() * 0.3,
+                expansion: 0.4 + Math.random() * 0.3,
+                economy: 0.3 + Math.random() * 0.3,
+                technology: 0.4 + Math.random() * 0.2,
+                riskTolerance: 0.7 + Math.random() * 0.3,
+              };
+            } else if (ai.strategy === "defensive") {
+              personality = {
+                aggression: 0.1 + Math.random() * 0.2,
+                expansion: 0.5 + Math.random() * 0.3,
+                economy: 0.7 + Math.random() * 0.3,
+                technology: 0.6 + Math.random() * 0.3,
+                riskTolerance: 0.1 + Math.random() * 0.3,
+              };
+            } else {
+              personality = {
+                aggression: 0.4 + Math.random() * 0.3,
+                expansion: 0.5 + Math.random() * 0.3,
+                economy: 0.5 + Math.random() * 0.3,
+                technology: 0.5 + Math.random() * 0.3,
+                riskTolerance: 0.4 + Math.random() * 0.3,
+              };
+            }
+            ai = { ...ai, personality };
+          }
+          
           // Only update AI every 30 seconds to 2 minutes based on difficulty
           const updateInterval = ai.difficulty === "easy" ? 120000 : ai.difficulty === "medium" ? 60000 : 30000;
           if (currentTime - ai.lastActionTime < updateInterval) {
