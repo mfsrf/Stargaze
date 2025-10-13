@@ -19,7 +19,7 @@ import {
   calculateDeuteriumProduction,
   calculateEnergyProduction,
 } from "../utils/gameFormulas";
-import { BUILDING_NAMES, PLANET_TYPE_BONUSES } from "../utils/gameConstants";
+import { BUILDING_NAMES, PLANET_TYPE_BONUSES, ENERGY_CONSUMPTION } from "../utils/gameConstants";
 
 interface BuildingCardProps {
   buildingType: BuildingType;
@@ -80,6 +80,27 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
     planet.buildings[BuildingType.RoboticsFactory],
     planet.buildings[BuildingType.NaniteFactory]
   );
+  
+  // Calculate energy consumption for next level (for mines)
+  let nextLevelEnergyConsumption = 0;
+  const isMine = buildingType === BuildingType.MetalMine || 
+                 buildingType === BuildingType.CrystalMine || 
+                 buildingType === BuildingType.DeuteriumSynthesizer;
+  
+  if (isMine) {
+    const nextLevel = currentLevel + 1;
+    let consumptionRate = 0;
+    
+    if (buildingType === BuildingType.MetalMine) {
+      consumptionRate = ENERGY_CONSUMPTION.metalMine;
+    } else if (buildingType === BuildingType.CrystalMine) {
+      consumptionRate = ENERGY_CONSUMPTION.crystalMine;
+    } else if (buildingType === BuildingType.DeuteriumSynthesizer) {
+      consumptionRate = ENERGY_CONSUMPTION.deuteriumSynthesizer;
+    }
+    
+    nextLevelEnergyConsumption = Math.floor(nextLevel * consumptionRate * Math.pow(1.1, nextLevel));
+  }
   
   // Calculate production info for resource buildings
   let productionInfo: { amount: number; bonus: number } | null = null;
@@ -321,6 +342,27 @@ export default function BuildingCard({ buildingType, planetId }: BuildingCardPro
                 </View>
               )}
             </View>
+            
+            {/* Energy Consumption for Mines */}
+            {isMine && nextLevelEnergyConsumption > 0 && (
+              <View style={{ 
+                flexDirection: "row", 
+                alignItems: "center", 
+                justifyContent: "center", 
+                marginTop: 8,
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.border,
+              }}>
+                <Ionicons name="flash" size={12} color={theme.colors.energy} />
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginLeft: 4 }}>
+                  Energy consumption: 
+                </Text>
+                <Text style={{ color: theme.colors.danger, fontSize: 10, fontWeight: "600", marginLeft: 4 }}>
+                  -{formatNumber(nextLevelEnergyConsumption)}/h
+                </Text>
+              </View>
+            )}
           </View>
           
           <TouchableOpacity
