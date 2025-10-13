@@ -13,6 +13,7 @@ import PlanetScreen from "./src/screens/PlanetScreen";
 import GalaxyScreen from "./src/screens/GalaxyScreen";
 import MessagesScreen from "./src/screens/MessagesScreen";
 import StatsScreen from "./src/screens/StatsScreen";
+import MissionsScreen from "./src/screens/MissionsScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 
 /*
@@ -56,6 +57,8 @@ function MainTabs() {
             iconName = focused ? "mail" : "mail-outline";
           } else if (route.name === "Stats") {
             iconName = focused ? "stats-chart" : "stats-chart-outline";
+          } else if (route.name === "Missions") {
+            iconName = focused ? "flag" : "flag-outline";
           } else if (route.name === "Settings") {
             iconName = focused ? "settings" : "settings-outline";
           }
@@ -76,6 +79,7 @@ function MainTabs() {
       <Tab.Screen name="Galaxy" component={GalaxyScreen} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Stats" component={StatsScreen} />
+      <Tab.Screen name="Missions" component={MissionsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );

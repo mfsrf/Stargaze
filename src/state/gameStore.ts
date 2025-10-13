@@ -26,6 +26,8 @@ import {
   CombatReport,
   CombatRound,
   DefenseComposition,
+  Mission,
+  MissionStatus,
 } from "../types/game";
 import {
   STARTING_RESOURCES,
@@ -93,6 +95,10 @@ interface GameStore extends GameState {
   markMessageAsRead: (messageId: string) => void;
   deleteMessage: (messageId: string) => void;
   
+  // Mission management
+  checkMissions: () => void;
+  claimMissionReward: (missionId: string) => void;
+  
   // AI management
   updateAI: () => void;
   
@@ -138,6 +144,53 @@ const createInitialPlanet = (
   };
 };
 
+const createInitialMissions = (): Mission[] => {
+  return [
+    {
+      id: "mission-1",
+      name: "Upgrade the Metal Mine to Level 1",
+      description: "Metal is the heart of your empire. To produce more you need better facilities. Start by upgrading the Metal Mine to Level 1.",
+      requirements: [
+        {
+          type: "buildingLevel",
+          buildingType: BuildingType.MetalMine,
+          level: 1,
+        },
+      ],
+      rewards: {
+        resources: {
+          metal: 500,
+          crystal: 500,
+          deuterium: 0,
+          energy: 0,
+        },
+      },
+      status: MissionStatus.Available,
+    },
+    {
+      id: "mission-2",
+      name: "Improve Energy Levels",
+      description: "With the upgrade of the Metal Mine you now have negative energy. This means you are consuming more than producing, which decreases the resources that you produce. Balance the energy by upgrading the Solar Plant.",
+      requirements: [
+        {
+          type: "buildingLevel",
+          buildingType: BuildingType.SolarPlant,
+          level: 1,
+        },
+      ],
+      rewards: {
+        resources: {
+          metal: 500,
+          crystal: 500,
+          deuterium: 0,
+          energy: 0,
+        },
+      },
+      status: MissionStatus.Available,
+    },
+  ];
+};
+
 const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
@@ -150,6 +203,7 @@ const useGameStore = create<GameStore>()(
         fleets: [],
         messages: [],
         exploredSystems: [],
+        missions: [],
         totalPoints: 0,
         economyPoints: 0,
         researchPoints: 0,
@@ -190,6 +244,7 @@ const useGameStore = create<GameStore>()(
           fleets: [],
           messages: [],
           exploredSystems: [`${startCoordinates.galaxy}:${startCoordinates.system}`], // Start with home system explored
+          missions: createInitialMissions(),
           totalPoints: 0,
           economyPoints: 0,
           researchPoints: 0,
@@ -337,6 +392,7 @@ const useGameStore = create<GameStore>()(
             fleets: [],
             messages: [],
             exploredSystems: [],
+            missions: [],
             totalPoints: 0,
             economyPoints: 0,
             researchPoints: 0,
@@ -935,6 +991,9 @@ const useGameStore = create<GameStore>()(
         
         // Update AI after player resources
         get().updateAI();
+        
+        // Check mission progress
+        get().checkMissions();
       },
       
       // Upgrade building
@@ -1416,6 +1475,116 @@ const useGameStore = create<GameStore>()(
             ...state.settings,
             ...settings,
           },
+        });
+      },
+      
+      // Check missions for completion
+      checkMissions: () => {
+        const state = get();
+        const updatedMissions = state.player.missions.map((mission) => {
+          if (mission.status === MissionStatus.Completed) return mission;
+          
+          // Check if all requirements are met
+          const allRequirementsMet = mission.requirements.every((req) => {
+            if (req.type === "buildingLevel" && req.buildingType) {
+              // Check if any planet has the required building level
+              return state.player.planets.some(
+                (planet) => planet.buildings[req.buildingType!] >= (req.level || 1)
+              );
+            }
+            if (req.type === "technologyLevel" && req.technologyType) {
+              return state.player.technologies[req.technologyType] >= (req.level || 1);
+            }
+            return false;
+          });
+          
+          // Mission complete but not yet claimed
+          if (allRequirementsMet) {
+            return mission; // Keep as available, player needs to claim reward
+          }
+          
+          return mission;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            missions: updatedMissions,
+          },
+        });
+      },
+      
+      // Claim mission reward
+      claimMissionReward: (missionId: string) => {
+        const state = get();
+        const mission = state.player.missions.find((m) => m.id === missionId);
+        
+        if (!mission || mission.status === MissionStatus.Completed) return;
+        
+        // Check if mission requirements are met
+        const allRequirementsMet = mission.requirements.every((req) => {
+          if (req.type === "buildingLevel" && req.buildingType) {
+            return state.player.planets.some(
+              (planet) => planet.buildings[req.buildingType!] >= (req.level || 1)
+            );
+          }
+          if (req.type === "technologyLevel" && req.technologyType) {
+            return state.player.technologies[req.technologyType] >= (req.level || 1);
+          }
+          return false;
+        });
+        
+        if (!allRequirementsMet) return;
+        
+        // Award resources to first planet
+        let updatedPlanets = [...state.player.planets];
+        if (mission.rewards.resources && updatedPlanets.length > 0) {
+          updatedPlanets[0] = {
+            ...updatedPlanets[0],
+            resources: {
+              metal: updatedPlanets[0].resources.metal + (mission.rewards.resources.metal || 0),
+              crystal: updatedPlanets[0].resources.crystal + (mission.rewards.resources.crystal || 0),
+              deuterium: updatedPlanets[0].resources.deuterium + (mission.rewards.resources.deuterium || 0),
+              energy: updatedPlanets[0].resources.energy,
+            },
+          };
+        }
+        
+        // Award ships to first planet
+        if (mission.rewards.ships && updatedPlanets.length > 0) {
+          const updatedFleet = { ...updatedPlanets[0].fleet };
+          Object.entries(mission.rewards.ships).forEach(([shipType, count]) => {
+            if (count) {
+              updatedFleet[shipType as ShipType] += count;
+            }
+          });
+          updatedPlanets[0] = {
+            ...updatedPlanets[0],
+            fleet: updatedFleet,
+          };
+        }
+        
+        // Mark mission as completed
+        const updatedMissions = state.player.missions.map((m) =>
+          m.id === missionId ? { ...m, status: MissionStatus.Completed } : m
+        );
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+            missions: updatedMissions,
+          },
+        });
+        
+        // Add notification message
+        get().addMessage({
+          id: uuidv4(),
+          type: "other",
+          title: `🎉 Mission Complete!`,
+          content: `You completed: ${mission.name}\n\nRewards claimed successfully!`,
+          timestamp: Date.now(),
+          read: false,
         });
       },
       

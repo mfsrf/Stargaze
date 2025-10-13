@@ -284,6 +284,7 @@ export interface Player {
   fleets: Fleet[];
   messages: Message[];
   exploredSystems: string[]; // Format: "galaxy:system"
+  missions: Mission[];
   totalPoints: number;
   economyPoints: number;
   researchPoints: number;
@@ -313,4 +314,32 @@ export interface GameState {
   lastUpdate: number;
   gameStartTime: number;
   initialized: boolean;
+}
+
+export enum MissionStatus {
+  Available = "available",
+  Completed = "completed",
+}
+
+export interface MissionRequirement {
+  type: "buildingLevel" | "technologyLevel" | "shipsBuilt" | "resourceAmount";
+  buildingType?: BuildingType;
+  technologyType?: TechnologyType;
+  shipType?: ShipType;
+  level?: number;
+  amount?: number;
+}
+
+export interface MissionReward {
+  resources?: Resources;
+  ships?: Partial<FleetComposition>;
+}
+
+export interface Mission {
+  id: string;
+  name: string;
+  description: string;
+  requirements: MissionRequirement[];
+  rewards: MissionReward;
+  status: MissionStatus;
 }
