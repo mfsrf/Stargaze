@@ -75,6 +75,7 @@ export default function PlanetDetailModal({
             backgroundColor: theme.colors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
+            height: "80%",
             maxHeight: "80%",
           }}
         >

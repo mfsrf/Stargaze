@@ -145,6 +145,7 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
             backgroundColor: theme.colors.background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
+            height: "90%",
             maxHeight: "90%",
           }}
         >
