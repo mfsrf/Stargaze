@@ -86,6 +86,7 @@ interface GameStore extends GameState {
   colonizePlanet: (coordinates: Coordinates) => boolean;
   renamePlanet: (planetId: string, newName: string) => void;
   selectPlanet: (planetId: string) => void;
+  setMineEfficiency: (planetId: string, mineType: "metal" | "crystal" | "deuterium", efficiency: number) => void;
   
   // Message management
   addMessage: (message: Message) => void;
@@ -129,6 +130,11 @@ const createInitialPlanet = (
     usedFields: 0,
     lastUpdate: Date.now(),
     constructionQueue: null,
+    mineEfficiency: {
+      metal: 100,
+      crystal: 100,
+      deuterium: 100,
+    },
   };
 };
 
@@ -1339,6 +1345,32 @@ const useGameStore = create<GameStore>()(
       // Select planet
       selectPlanet: (planetId: string) => {
         set({ selectedPlanetId: planetId });
+      },
+      
+      // Set mine efficiency
+      setMineEfficiency: (planetId: string, mineType: "metal" | "crystal" | "deuterium", efficiency: number) => {
+        const state = get();
+        const clampedEfficiency = Math.max(0, Math.min(100, efficiency));
+        
+        const updatedPlanets = state.player.planets.map((planet) => {
+          if (planet.id === planetId) {
+            return {
+              ...planet,
+              mineEfficiency: {
+                ...planet.mineEfficiency,
+                [mineType]: clampedEfficiency,
+              },
+            };
+          }
+          return planet;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
       },
       
       // Add message

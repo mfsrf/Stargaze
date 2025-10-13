@@ -178,6 +178,11 @@ export interface Planet {
   usedFields: number;
   lastUpdate: number;
   constructionQueue: ConstructionQueue | null;
+  mineEfficiency: {
+    metal: number; // 0-100 (percentage)
+    crystal: number; // 0-100 (percentage)
+    deuterium: number; // 0-100 (percentage)
+  };
 }
 
 export interface Fleet {

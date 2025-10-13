@@ -63,8 +63,12 @@ const Tab = createMaterialTopTabNavigator();
 function BuildingsTab() {
   const theme = useThemeStore((state) => state.theme);
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
+  const planets = useGameStore((state) => state.player.planets);
+  const setMineEfficiency = useGameStore((state) => state.setMineEfficiency);
   
-  if (!selectedPlanetId) {
+  const planet = planets.find((p) => p.id === selectedPlanetId);
+  
+  if (!selectedPlanetId || !planet) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: "center", justifyContent: "center" }}>
         <Text style={{ color: theme.colors.textSecondary }}>No planet selected</Text>
@@ -105,6 +109,155 @@ function BuildingsTab() {
       {resourceBuildings.map((building) => (
         <BuildingCard key={building} buildingType={building} planetId={selectedPlanetId} />
       ))}
+      
+      {/* Mine Efficiency Controls */}
+      <View style={{ 
+        backgroundColor: theme.colors.card, 
+        borderRadius: 12, 
+        padding: 16, 
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+      }}>
+        <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "bold", marginBottom: 12 }}>
+          ⚡ Mine Efficiency Controls
+        </Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 16 }}>
+          Reduce efficiency to save energy. Lower efficiency = less production + less energy consumption.
+        </Text>
+        
+        {/* Metal Mine Efficiency */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="hammer" size={16} color={theme.colors.metal} />
+              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600", marginLeft: 6 }}>
+                Metal Mine
+              </Text>
+            </View>
+            <Text style={{ color: theme.colors.primary, fontSize: 14, fontWeight: "bold" }}>
+              {planet.mineEfficiency?.metal || 100}%
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[0, 10, 25, 50, 75, 90, 100].map((value) => (
+              <TouchableOpacity
+                key={value}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setMineEfficiency(selectedPlanetId, "metal", value);
+                }}
+                activeOpacity={0.7}
+                style={{
+                  flex: 1,
+                  backgroundColor: (planet.mineEfficiency?.metal || 100) === value ? theme.colors.primary : theme.colors.background,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <Text style={{ 
+                  color: (planet.mineEfficiency?.metal || 100) === value ? "#FFFFFF" : theme.colors.textSecondary, 
+                  fontSize: 11,
+                  fontWeight: "600",
+                }}>
+                  {value}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        
+        {/* Crystal Mine Efficiency */}
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="diamond" size={16} color={theme.colors.crystal} />
+              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600", marginLeft: 6 }}>
+                Crystal Mine
+              </Text>
+            </View>
+            <Text style={{ color: theme.colors.primary, fontSize: 14, fontWeight: "bold" }}>
+              {planet.mineEfficiency?.crystal || 100}%
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[0, 10, 25, 50, 75, 90, 100].map((value) => (
+              <TouchableOpacity
+                key={value}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setMineEfficiency(selectedPlanetId, "crystal", value);
+                }}
+                activeOpacity={0.7}
+                style={{
+                  flex: 1,
+                  backgroundColor: (planet.mineEfficiency?.crystal || 100) === value ? theme.colors.primary : theme.colors.background,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <Text style={{ 
+                  color: (planet.mineEfficiency?.crystal || 100) === value ? "#FFFFFF" : theme.colors.textSecondary, 
+                  fontSize: 11,
+                  fontWeight: "600",
+                }}>
+                  {value}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        
+        {/* Deuterium Synthesizer Efficiency */}
+        <View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons name="water" size={16} color={theme.colors.deuterium} />
+              <Text style={{ color: theme.colors.text, fontSize: 14, fontWeight: "600", marginLeft: 6 }}>
+                Deuterium Synth
+              </Text>
+            </View>
+            <Text style={{ color: theme.colors.primary, fontSize: 14, fontWeight: "bold" }}>
+              {planet.mineEfficiency?.deuterium || 100}%
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[0, 10, 25, 50, 75, 90, 100].map((value) => (
+              <TouchableOpacity
+                key={value}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setMineEfficiency(selectedPlanetId, "deuterium", value);
+                }}
+                activeOpacity={0.7}
+                style={{
+                  flex: 1,
+                  backgroundColor: (planet.mineEfficiency?.deuterium || 100) === value ? theme.colors.primary : theme.colors.background,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <Text style={{ 
+                  color: (planet.mineEfficiency?.deuterium || 100) === value ? "#FFFFFF" : theme.colors.textSecondary, 
+                  fontSize: 11,
+                  fontWeight: "600",
+                }}>
+                  {value}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
       
       <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "bold", marginBottom: 12, marginTop: 12 }}>
         Storage

@@ -89,10 +89,11 @@ export function getTechnologyResearchTime(
  */
 export function calculateMetalProduction(
   mineLevel: number,
-  resourceMultiplier: number
+  resourceMultiplier: number,
+  efficiency: number = 100
 ): number {
-  if (mineLevel === 0) return 600 * resourceMultiplier; // Base production
-  return Math.floor(BASE_PRODUCTION.metal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier);
+  if (mineLevel === 0) return 600 * resourceMultiplier * (efficiency / 100); // Base production
+  return Math.floor(BASE_PRODUCTION.metal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier * (efficiency / 100));
 }
 
 /**
@@ -100,10 +101,11 @@ export function calculateMetalProduction(
  */
 export function calculateCrystalProduction(
   mineLevel: number,
-  resourceMultiplier: number
+  resourceMultiplier: number,
+  efficiency: number = 100
 ): number {
-  if (mineLevel === 0) return 300 * resourceMultiplier; // Base production
-  return Math.floor(BASE_PRODUCTION.crystal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier);
+  if (mineLevel === 0) return 300 * resourceMultiplier * (efficiency / 100); // Base production
+  return Math.floor(BASE_PRODUCTION.crystal * mineLevel * Math.pow(1.1, mineLevel) * resourceMultiplier * (efficiency / 100));
 }
 
 /**
@@ -111,10 +113,11 @@ export function calculateCrystalProduction(
  */
 export function calculateDeuteriumProduction(
   synthLevel: number,
-  resourceMultiplier: number
+  resourceMultiplier: number,
+  efficiency: number = 100
 ): number {
   if (synthLevel === 0) return 0; // No base production
-  return Math.floor(BASE_PRODUCTION.deuterium * synthLevel * Math.pow(1.1, synthLevel) * resourceMultiplier);
+  return Math.floor(BASE_PRODUCTION.deuterium * synthLevel * Math.pow(1.1, synthLevel) * resourceMultiplier * (efficiency / 100));
 }
 
 /**
@@ -132,11 +135,14 @@ export function calculateEnergyProduction(solarPlantLevel: number, fusionReactor
 export function calculateEnergyConsumption(
   metalMineLevel: number,
   crystalMineLevel: number,
-  deuteriumSynthLevel: number
+  deuteriumSynthLevel: number,
+  metalEfficiency: number = 100,
+  crystalEfficiency: number = 100,
+  deuteriumEfficiency: number = 100
 ): number {
-  const metalConsumption = metalMineLevel * ENERGY_CONSUMPTION.metalMine * Math.pow(1.1, metalMineLevel);
-  const crystalConsumption = crystalMineLevel * ENERGY_CONSUMPTION.crystalMine * Math.pow(1.1, crystalMineLevel);
-  const deuteriumConsumption = deuteriumSynthLevel * ENERGY_CONSUMPTION.deuteriumSynthesizer * Math.pow(1.1, deuteriumSynthLevel);
+  const metalConsumption = metalMineLevel * ENERGY_CONSUMPTION.metalMine * Math.pow(1.1, metalMineLevel) * (metalEfficiency / 100);
+  const crystalConsumption = crystalMineLevel * ENERGY_CONSUMPTION.crystalMine * Math.pow(1.1, crystalMineLevel) * (crystalEfficiency / 100);
+  const deuteriumConsumption = deuteriumSynthLevel * ENERGY_CONSUMPTION.deuteriumSynthesizer * Math.pow(1.1, deuteriumSynthLevel) * (deuteriumEfficiency / 100);
   
   return Math.floor(metalConsumption + crystalConsumption + deuteriumConsumption);
 }
@@ -153,7 +159,10 @@ export function calculateEnergyBalance(planet: Planet): number {
   const consumption = calculateEnergyConsumption(
     planet.buildings[BuildingType.MetalMine],
     planet.buildings[BuildingType.CrystalMine],
-    planet.buildings[BuildingType.DeuteriumSynthesizer]
+    planet.buildings[BuildingType.DeuteriumSynthesizer],
+    planet.mineEfficiency?.metal || 100,
+    planet.mineEfficiency?.crystal || 100,
+    planet.mineEfficiency?.deuterium || 100
   );
   
   return production - consumption;
@@ -172,21 +181,43 @@ export function calculateStorageCapacity(storageLevel: number): number {
  * Calculate total production per hour for a planet
  */
 export function calculatePlanetProduction(planet: Planet, resourceMultiplier: number): Resources {
+  const metalEfficiency = planet.mineEfficiency?.metal || 100;
+  const crystalEfficiency = planet.mineEfficiency?.crystal || 100;
+  const deuteriumEfficiency = planet.mineEfficiency?.deuterium || 100;
+  
   const energyBalance = calculateEnergyBalance(planet);
-  const energyEfficiency = energyBalance >= 0 ? 1 : Math.max(0.1, (energyBalance + calculateEnergyConsumption(
-    planet.buildings[BuildingType.MetalMine],
-    planet.buildings[BuildingType.CrystalMine],
-    planet.buildings[BuildingType.DeuteriumSynthesizer]
-  )) / calculateEnergyConsumption(
-    planet.buildings[BuildingType.MetalMine],
-    planet.buildings[BuildingType.CrystalMine],
-    planet.buildings[BuildingType.DeuteriumSynthesizer]
-  ));
+  
+  // If energy is positive, use mine efficiency directly
+  // If energy is negative, production is reduced further
+  let finalMetalEfficiency = metalEfficiency / 100;
+  let finalCrystalEfficiency = crystalEfficiency / 100;
+  let finalDeuteriumEfficiency = deuteriumEfficiency / 100;
+  
+  if (energyBalance < 0) {
+    const totalConsumption = calculateEnergyConsumption(
+      planet.buildings[BuildingType.MetalMine],
+      planet.buildings[BuildingType.CrystalMine],
+      planet.buildings[BuildingType.DeuteriumSynthesizer],
+      metalEfficiency,
+      crystalEfficiency,
+      deuteriumEfficiency
+    );
+    const energyProduction = calculateEnergyProduction(
+      planet.buildings[BuildingType.SolarPlant],
+      planet.buildings[BuildingType.FusionReactor]
+    );
+    const energyRatio = Math.max(0.1, energyProduction / totalConsumption);
+    
+    // Apply energy penalty on top of efficiency
+    finalMetalEfficiency *= energyRatio;
+    finalCrystalEfficiency *= energyRatio;
+    finalDeuteriumEfficiency *= energyRatio;
+  }
   
   return {
-    metal: calculateMetalProduction(planet.buildings[BuildingType.MetalMine], resourceMultiplier) * energyEfficiency,
-    crystal: calculateCrystalProduction(planet.buildings[BuildingType.CrystalMine], resourceMultiplier) * energyEfficiency,
-    deuterium: calculateDeuteriumProduction(planet.buildings[BuildingType.DeuteriumSynthesizer], resourceMultiplier) * energyEfficiency,
+    metal: calculateMetalProduction(planet.buildings[BuildingType.MetalMine], resourceMultiplier, metalEfficiency) * (energyBalance < 0 ? (finalMetalEfficiency / (metalEfficiency / 100)) : 1),
+    crystal: calculateCrystalProduction(planet.buildings[BuildingType.CrystalMine], resourceMultiplier, crystalEfficiency) * (energyBalance < 0 ? (finalCrystalEfficiency / (crystalEfficiency / 100)) : 1),
+    deuterium: calculateDeuteriumProduction(planet.buildings[BuildingType.DeuteriumSynthesizer], resourceMultiplier, deuteriumEfficiency) * (energyBalance < 0 ? (finalDeuteriumEfficiency / (deuteriumEfficiency / 100)) : 1),
     energy: energyBalance,
   };
 }
