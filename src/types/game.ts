@@ -60,7 +60,8 @@ export enum ShipType {
   LargeCargo = "largeCargo",
   ColonyShip = "colonyShip",
   Recycler = "recycler",
-  EspionageProbe = "espionageProbe"
+  EspionageProbe = "espionageProbe",
+  Scout = "scout"
 }
 
 export enum DefenseType {
@@ -80,7 +81,8 @@ export enum MissionType {
   Colonize = "colonize",
   Espionage = "espionage",
   Harvest = "harvest",
-  Hold = "hold"
+  Hold = "hold",
+  Scout = "scout"
 }
 
 export interface BuildingLevels {
@@ -131,6 +133,7 @@ export interface FleetComposition {
   [ShipType.ColonyShip]: number;
   [ShipType.Recycler]: number;
   [ShipType.EspionageProbe]: number;
+  [ShipType.Scout]: number;
 }
 
 export interface DefenseComposition {
@@ -250,6 +253,17 @@ export interface EspionageReport {
   buildings?: Partial<BuildingLevels>;
   research?: Partial<TechnologyLevels>;
   detectionChance: number;
+}
+
+export interface ScoutReport {
+  id: string;
+  timestamp: number;
+  coordinates: Coordinates;
+  planetName: string;
+  planetType: PlanetType;
+  temperature: number;
+  maxFields: number;
+  owner: string | null;
 }
 
 export interface Message {

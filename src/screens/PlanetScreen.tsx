@@ -41,6 +41,7 @@ const SHIP_COLORS: Record<ShipType, string[]> = {
   [ShipType.ColonyShip]: ["#66BB6A", "#4CAF50"],
   [ShipType.Recycler]: ["#4DB6AC", "#26A69A"],
   [ShipType.EspionageProbe]: ["#90A4AE", "#78909C"],
+  [ShipType.Scout]: ["#80CBC4", "#4DB6AC"],
 };
 
 const SHIP_ICONS: Record<ShipType, keyof typeof Ionicons.glyphMap> = {
@@ -57,6 +58,7 @@ const SHIP_ICONS: Record<ShipType, keyof typeof Ionicons.glyphMap> = {
   [ShipType.ColonyShip]: "home-outline",
   [ShipType.Recycler]: "reload-outline",
   [ShipType.EspionageProbe]: "eye-outline",
+  [ShipType.Scout]: "compass-outline",
 };
 
 const Tab = createMaterialTopTabNavigator();
@@ -508,6 +510,7 @@ function ShipyardTab() {
     ShipType.ColonyShip,
     ShipType.Recycler,
     ShipType.EspionageProbe,
+    ShipType.Scout,
   ];
   
   return (
@@ -686,6 +689,8 @@ function FleetTab() {
         return "home";
       case MissionType.Espionage:
         return "eye";
+      case MissionType.Scout:
+        return "compass";
       case MissionType.Harvest:
         return "reload";
       case MissionType.Hold:
@@ -705,6 +710,8 @@ function FleetTab() {
         return theme.colors.success;
       case MissionType.Espionage:
         return theme.colors.secondary;
+      case MissionType.Scout:
+        return theme.colors.success;
       case MissionType.Harvest:
         return theme.colors.crystal;
       case MissionType.Hold:

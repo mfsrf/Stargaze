@@ -120,6 +120,7 @@ export const SHIP_BASE_COSTS: Record<ShipType, Resources> = {
   [ShipType.ColonyShip]: { metal: 10000, crystal: 20000, deuterium: 10000, energy: 0 },
   [ShipType.Recycler]: { metal: 10000, crystal: 6000, deuterium: 2000, energy: 0 },
   [ShipType.EspionageProbe]: { metal: 0, crystal: 1000, deuterium: 0, energy: 0 },
+  [ShipType.Scout]: { metal: 0, crystal: 1000, deuterium: 0, energy: 0 },
 };
 
 // Ship names
@@ -137,6 +138,7 @@ export const SHIP_NAMES: Record<ShipType, string> = {
   [ShipType.ColonyShip]: "Colony Ship",
   [ShipType.Recycler]: "Recycler",
   [ShipType.EspionageProbe]: "Espionage Probe",
+  [ShipType.Scout]: "Scout",
 };
 
 // Ship stats (attack, shield, armor, speed, cargo, fuel consumption)
@@ -163,6 +165,7 @@ export const SHIP_STATS: Record<ShipType, ShipStats> = {
   [ShipType.ColonyShip]: { attack: 50, shield: 100, armor: 3000, speed: 2500, cargo: 7500, fuelConsumption: 1000 },
   [ShipType.Recycler]: { attack: 1, shield: 10, armor: 1600, speed: 2000, cargo: 20000, fuelConsumption: 300 },
   [ShipType.EspionageProbe]: { attack: 0, shield: 0, armor: 100, speed: 100000000, cargo: 5, fuelConsumption: 1 },
+  [ShipType.Scout]: { attack: 0, shield: 0, armor: 100, speed: 100000000, cargo: 5, fuelConsumption: 1 },
 };
 
 // Defense base costs
@@ -258,6 +261,7 @@ export const INITIAL_FLEET: FleetComposition = {
   [ShipType.ColonyShip]: 0,
   [ShipType.Recycler]: 0,
   [ShipType.EspionageProbe]: 0,
+  [ShipType.Scout]: 0,
 };
 
 // Initial defense composition
@@ -323,6 +327,7 @@ export const SHIP_PREREQUISITES: Partial<Record<ShipType, Partial<TechnologyLeve
   [ShipType.ColonyShip]: { [BuildingType.Shipyard]: 4, [TechnologyType.ImpulseDrive]: 3 },
   [ShipType.Recycler]: { [BuildingType.Shipyard]: 4, [TechnologyType.CombustionDrive]: 6, [TechnologyType.ShieldingTech]: 2 },
   [ShipType.EspionageProbe]: { [BuildingType.Shipyard]: 3, [TechnologyType.CombustionDrive]: 3, [TechnologyType.EspionageTech]: 2 },
+  [ShipType.Scout]: { [BuildingType.Shipyard]: 3, [TechnologyType.CombustionDrive]: 3, [TechnologyType.ComputerTech]: 1 },
   [ShipType.Bomber]: { [BuildingType.Shipyard]: 8, [TechnologyType.ImpulseDrive]: 6, [TechnologyType.PlasmaTech]: 5 },
   [ShipType.Destroyer]: { [BuildingType.Shipyard]: 9, [TechnologyType.HyperspaceDrive]: 6, [TechnologyType.HyperspaceTech]: 5 },
   [ShipType.Deathstar]: { [BuildingType.Shipyard]: 12, [TechnologyType.HyperspaceDrive]: 7, [TechnologyType.HyperspaceTech]: 6, [TechnologyType.WeaponsTech]: 12 },

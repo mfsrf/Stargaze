@@ -23,6 +23,7 @@ import {
   GameSettings,
   PlanetType,
   EspionageReport,
+  ScoutReport,
   CombatReport,
   CombatRound,
   DefenseComposition,
@@ -41,6 +42,7 @@ import {
   DEFENSE_BASE_COSTS,
   SHIP_PREREQUISITES,
   SHIP_STATS,
+  PLANET_TYPE_BONUSES,
 } from "../utils/gameConstants";
 import {
   calculatePlanetProduction,
@@ -54,7 +56,7 @@ import {
   calculateUsedFields,
   checkShipPrerequisites,
 } from "../utils/gameFormulas";
-import { getPlanetType, calculateTemperature } from "../utils/galaxyManager";
+import { getPlanetType, calculateTemperature, getPlanetTypeName } from "../utils/galaxyManager";
 
 interface GameStore extends GameState {
   // Game initialization
@@ -653,6 +655,111 @@ const useGameStore = create<GameStore>()(
                   type: "espionage",
                   title: "🔍 Espionage: No Target",
                   content: `Your espionage probes arrived at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}] but found no planet.\n\nThe position is empty or uninhabited.`,
+                  timestamp: currentTime,
+                  read: false,
+                });
+              }
+            }
+            
+            // Process scout missions
+            if (fleet.mission === MissionType.Scout) {
+              // Find target planet (could be player's own planet, AI planet, or empty)
+              const targetPlanet = finalPlanets.find(
+                (p) => p.coordinates.galaxy === fleet.destination.galaxy &&
+                       p.coordinates.system === fleet.destination.system &&
+                       p.coordinates.position === fleet.destination.position
+              );
+              
+              // Check AI planets too
+              let targetAIPlanet: Planet | null = null;
+              let targetOwnerName = "Unknown";
+              
+              if (!targetPlanet) {
+                for (const aiPlayer of state.aiPlayers) {
+                  const aiPlanet = aiPlayer.planets.find(
+                    (p) => p.coordinates.galaxy === fleet.destination.galaxy &&
+                           p.coordinates.system === fleet.destination.system &&
+                           p.coordinates.position === fleet.destination.position
+                  );
+                  if (aiPlanet) {
+                    targetAIPlanet = aiPlanet;
+                    targetOwnerName = aiPlayer.name;
+                    break;
+                  }
+                }
+              } else {
+                targetOwnerName = state.player.name;
+              }
+              
+              const actualTarget = targetPlanet || targetAIPlanet;
+              
+              if (actualTarget) {
+                // Build scout report
+                const scoutReport: ScoutReport = {
+                  id: uuidv4(),
+                  timestamp: currentTime,
+                  coordinates: fleet.destination,
+                  planetName: actualTarget.name,
+                  planetType: actualTarget.type,
+                  temperature: actualTarget.temperature,
+                  maxFields: actualTarget.maxFields,
+                  owner: targetOwnerName,
+                };
+                
+                // Get planet type info from constants
+                const planetTypeInfo = PLANET_TYPE_BONUSES[actualTarget.type];
+                const planetTypeName = getPlanetTypeName(actualTarget.type);
+                
+                // Build report content
+                let reportContent = `Scout Report for ${actualTarget.name}\n📍 Location: [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}]\n\n`;
+                reportContent += `🌍 PLANET CHARACTERISTICS:\n`;
+                reportContent += `  • Type: ${planetTypeName}\n`;
+                reportContent += `  • Temperature: ${actualTarget.temperature}°C\n`;
+                reportContent += `  • Fields: ${actualTarget.maxFields}\n`;
+                reportContent += `  • Owner: ${targetOwnerName}\n\n`;
+                reportContent += `📊 PRODUCTION BONUSES:\n`;
+                reportContent += `  • ${planetTypeInfo.description}\n\n`;
+                
+                // Show bonuses/penalties
+                const bonuses = [];
+                if (planetTypeInfo.metal !== 1.0) {
+                  const sign = planetTypeInfo.metal > 1.0 ? "+" : "";
+                  bonuses.push(`  • Metal: ${sign}${Math.round((planetTypeInfo.metal - 1.0) * 100)}%`);
+                }
+                if (planetTypeInfo.crystal !== 1.0) {
+                  const sign = planetTypeInfo.crystal > 1.0 ? "+" : "";
+                  bonuses.push(`  • Crystal: ${sign}${Math.round((planetTypeInfo.crystal - 1.0) * 100)}%`);
+                }
+                if (planetTypeInfo.deuterium !== 1.0) {
+                  const sign = planetTypeInfo.deuterium > 1.0 ? "+" : "";
+                  bonuses.push(`  • Deuterium: ${sign}${Math.round((planetTypeInfo.deuterium - 1.0) * 100)}%`);
+                }
+                if (planetTypeInfo.energy !== 1.0) {
+                  const sign = planetTypeInfo.energy > 1.0 ? "+" : "";
+                  bonuses.push(`  • Energy: ${sign}${Math.round((planetTypeInfo.energy - 1.0) * 100)}%`);
+                }
+                
+                if (bonuses.length > 0) {
+                  reportContent += bonuses.join("\n");
+                }
+                
+                // Generate scout message
+                newMessages.push({
+                  id: uuidv4(),
+                  type: "other",
+                  title: `🧭 Scout Report: ${actualTarget.name}`,
+                  content: reportContent,
+                  timestamp: currentTime,
+                  read: false,
+                  data: scoutReport,
+                });
+              } else {
+                // No planet found
+                newMessages.push({
+                  id: uuidv4(),
+                  type: "other",
+                  title: "🧭 Scout: No Target",
+                  content: `Your scouts arrived at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}] but found no planet.\n\nThe position is empty.`,
                   timestamp: currentTime,
                   read: false,
                 });

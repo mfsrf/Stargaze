@@ -38,6 +38,7 @@ const SHIP_ICONS: Record<ShipType, keyof typeof Ionicons.glyphMap> = {
   [ShipType.ColonyShip]: "home-outline",
   [ShipType.Recycler]: "reload-outline",
   [ShipType.EspionageProbe]: "eye-outline",
+  [ShipType.Scout]: "compass-outline",
 };
 
 const SHIP_COLORS: Record<ShipType, string[]> = {
@@ -54,6 +55,7 @@ const SHIP_COLORS: Record<ShipType, string[]> = {
   [ShipType.ColonyShip]: ["#66BB6A", "#4CAF50"],
   [ShipType.Recycler]: ["#4DB6AC", "#26A69A"],
   [ShipType.EspionageProbe]: ["#90A4AE", "#78909C"],
+  [ShipType.Scout]: ["#80CBC4", "#4DB6AC"],
 };
 
 const SHIP_CATEGORIES: Record<ShipType, "combat" | "civil"> = {
@@ -70,6 +72,7 @@ const SHIP_CATEGORIES: Record<ShipType, "combat" | "civil"> = {
   [ShipType.ColonyShip]: "civil",
   [ShipType.Recycler]: "civil",
   [ShipType.EspionageProbe]: "civil",
+  [ShipType.Scout]: "civil",
 };
 
 export default function ShipCard({ shipType, planetId }: ShipCardProps) {

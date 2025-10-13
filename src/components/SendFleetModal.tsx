@@ -147,6 +147,7 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
       [ShipType.ColonyShip]: selectedShips[ShipType.ColonyShip] || 0,
       [ShipType.Recycler]: selectedShips[ShipType.Recycler] || 0,
       [ShipType.EspionageProbe]: selectedShips[ShipType.EspionageProbe] || 0,
+      [ShipType.Scout]: selectedShips[ShipType.Scout] || 0,
     };
     
     // Prepare cargo for transport missions
@@ -171,6 +172,7 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
     { type: MissionType.Attack, icon: "rocket", label: "Attack", color: theme.colors.danger },
     { type: MissionType.Transport, icon: "cube", label: "Transport", color: theme.colors.primary },
     { type: MissionType.Espionage, icon: "eye", label: "Spy", color: theme.colors.secondary },
+    { type: MissionType.Scout, icon: "compass", label: "Scout", color: theme.colors.success },
   ];
   
   return (
