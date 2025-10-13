@@ -358,11 +358,53 @@ const useGameStore = create<GameStore>()(
           updatedResearchQueue = null;
         }
         
+        // Process fleet movements
+        let updatedFleets = [...state.player.fleets];
+        let finalPlanets = [...updatedPlanets];
+        
+        updatedFleets = updatedFleets.filter((fleet) => {
+          // Check if fleet arrived at destination
+          if (!fleet.isReturning && currentTime >= fleet.arrivalTime) {
+            // Fleet arrived - mark as returning
+            fleet.isReturning = true;
+            return true;
+          }
+          
+          // Check if fleet returned home
+          if (fleet.isReturning && fleet.returnTime && currentTime >= fleet.returnTime) {
+            // Return ships to origin planet
+            const originPlanet = finalPlanets.find(
+              (p) => p.coordinates.galaxy === fleet.origin.galaxy &&
+                     p.coordinates.system === fleet.origin.system &&
+                     p.coordinates.position === fleet.origin.position
+            );
+            
+            if (originPlanet) {
+              const updatedFleet: FleetComposition = { ...originPlanet.fleet };
+              for (const [shipType, count] of Object.entries(fleet.ships)) {
+                if (count > 0) {
+                  updatedFleet[shipType as ShipType] += count;
+                }
+              }
+              
+              finalPlanets = finalPlanets.map((p) => 
+                p.id === originPlanet.id ? { ...p, fleet: updatedFleet } : p
+              );
+            }
+            
+            // Remove fleet
+            return false;
+          }
+          
+          return true;
+        });
+        
         set({
           player: {
             ...state.player,
-            planets: updatedPlanets,
+            planets: finalPlanets,
             technologies: updatedTechnologies,
+            fleets: updatedFleets,
           },
           researchQueue: updatedResearchQueue,
           lastUpdate: currentTime,
@@ -610,7 +652,71 @@ const useGameStore = create<GameStore>()(
         mission: MissionType,
         cargo?: Resources
       ) => {
-        // This will be implemented with AI and combat system
+        const state = get();
+        const sourcePlanet = state.player.planets.find((p) => p.id === fromPlanetId);
+        
+        if (!sourcePlanet) return false;
+        
+        // Check if player has enough ships
+        for (const [shipType, count] of Object.entries(ships)) {
+          if (count > 0 && sourcePlanet.fleet[shipType as ShipType] < count) {
+            return false;
+          }
+        }
+        
+        // Calculate travel time (simplified - 30 seconds per system difference)
+        const galaxyDiff = Math.abs(destination.galaxy - sourcePlanet.coordinates.galaxy);
+        const systemDiff = Math.abs(destination.system - sourcePlanet.coordinates.system);
+        const positionDiff = Math.abs(destination.position - sourcePlanet.coordinates.position);
+        const travelTime = (galaxyDiff * 60 + systemDiff * 30 + positionDiff * 10) * 1000; // in milliseconds
+        const minTravelTime = 10000; // minimum 10 seconds
+        const actualTravelTime = Math.max(travelTime, minTravelTime);
+        
+        const now = Date.now();
+        const arrivalTime = now + actualTravelTime;
+        const returnTime = arrivalTime + actualTravelTime;
+        
+        // Create fleet
+        const newFleet: Fleet = {
+          id: uuidv4(),
+          ships,
+          mission,
+          origin: sourcePlanet.coordinates,
+          destination,
+          departureTime: now,
+          arrivalTime,
+          returnTime,
+          cargo,
+          isReturning: false,
+          ownerId: "player",
+        };
+        
+        // Deduct ships from source planet
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === fromPlanetId) {
+            const updatedFleet: FleetComposition = { ...p.fleet };
+            for (const [shipType, count] of Object.entries(ships)) {
+              if (count > 0) {
+                updatedFleet[shipType as ShipType] -= count;
+              }
+            }
+            return {
+              ...p,
+              fleet: updatedFleet,
+            };
+          }
+          return p;
+        });
+        
+        // Add fleet to player's fleets
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+            fleets: [...state.player.fleets, newFleet],
+          },
+        });
+        
         return true;
       },
       
