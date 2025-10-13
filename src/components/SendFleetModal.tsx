@@ -80,6 +80,18 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
     return total;
   }, 0);
   
+  // Calculate total cargo selected
+  const totalCargoSelected = (parseInt(cargoMetal) || 0) + (parseInt(cargoCrystal) || 0) + (parseInt(cargoDeuterium) || 0);
+  
+  // Check cargo validation
+  const metalAmount = parseInt(cargoMetal) || 0;
+  const crystalAmount = parseInt(cargoCrystal) || 0;
+  const deuteriumAmount = parseInt(cargoDeuterium) || 0;
+  const hasEnoughMetal = metalAmount <= planet.resources.metal;
+  const hasEnoughCrystal = crystalAmount <= planet.resources.crystal;
+  const hasEnoughDeuterium = deuteriumAmount <= planet.resources.deuterium;
+  const cargoFitsInCapacity = totalCargoSelected <= totalCargoCapacity;
+  
   const canSendFleet = () => {
     if (totalSelectedShips === 0) return false;
     const galaxy = parseInt(targetGalaxy);
@@ -98,6 +110,12 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
       position === planet.coordinates.position
     ) {
       return false;
+    }
+    
+    // Validate cargo if transport mission
+    if (selectedMission === MissionType.Transport) {
+      if (!hasEnoughMetal || !hasEnoughCrystal || !hasEnoughDeuterium) return false;
+      if (!cargoFitsInCapacity) return false;
     }
     
     return true;
@@ -431,16 +449,36 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     Resources to Transport
                   </Text>
                   <View style={{
-                    backgroundColor: theme.colors.primary + "20",
+                    backgroundColor: cargoFitsInCapacity ? theme.colors.primary + "20" : theme.colors.danger + "20",
                     paddingHorizontal: 10,
                     paddingVertical: 4,
                     borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: cargoFitsInCapacity ? "transparent" : theme.colors.danger + "40",
                   }}>
-                    <Text style={{ color: theme.colors.primary, fontSize: 11, fontWeight: "700" }}>
-                      Cargo: {formatNumber(totalCargoCapacity)}
+                    <Text style={{ color: cargoFitsInCapacity ? theme.colors.primary : theme.colors.danger, fontSize: 11, fontWeight: "700" }}>
+                      {totalCargoSelected.toLocaleString()} / {formatNumber(totalCargoCapacity)}
                     </Text>
                   </View>
                 </View>
+                
+                {!cargoFitsInCapacity && (
+                  <View style={{
+                    backgroundColor: theme.colors.danger + "20",
+                    padding: 12,
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: theme.colors.danger + "40",
+                  }}>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Ionicons name="alert-circle" size={16} color={theme.colors.danger} />
+                      <Text style={{ color: theme.colors.danger, fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
+                        Cargo exceeds ship capacity
+                      </Text>
+                    </View>
+                  </View>
+                )}
                 
                 {totalCargoCapacity === 0 && (
                   <View style={{
@@ -478,12 +516,12 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                       style={{
                         flex: 1,
                         backgroundColor: theme.colors.card,
-                        color: theme.colors.text,
+                        color: hasEnoughMetal ? theme.colors.text : theme.colors.danger,
                         paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: theme.colors.border,
+                        borderColor: hasEnoughMetal ? theme.colors.border : theme.colors.danger,
                         fontSize: 14,
                         textAlign: "center",
                       }}
@@ -534,12 +572,12 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                       style={{
                         flex: 1,
                         backgroundColor: theme.colors.card,
-                        color: theme.colors.text,
+                        color: hasEnoughCrystal ? theme.colors.text : theme.colors.danger,
                         paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: theme.colors.border,
+                        borderColor: hasEnoughCrystal ? theme.colors.border : theme.colors.danger,
                         fontSize: 14,
                         textAlign: "center",
                       }}
@@ -592,12 +630,12 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                       style={{
                         flex: 1,
                         backgroundColor: theme.colors.card,
-                        color: theme.colors.text,
+                        color: hasEnoughDeuterium ? theme.colors.text : theme.colors.danger,
                         paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: theme.colors.border,
+                        borderColor: hasEnoughDeuterium ? theme.colors.border : theme.colors.danger,
                         fontSize: 14,
                         textAlign: "center",
                       }}
@@ -670,7 +708,13 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                   }}
                 >
                   <Text style={{ color: theme.colors.textSecondary, fontSize: 16, fontWeight: "600" }}>
-                    {totalSelectedShips === 0 ? "Select Ships" : "Invalid Coordinates"}
+                    {totalSelectedShips === 0 
+                      ? "Select Ships" 
+                      : selectedMission === MissionType.Transport && !cargoFitsInCapacity
+                      ? "Cargo Exceeds Capacity"
+                      : selectedMission === MissionType.Transport && (!hasEnoughMetal || !hasEnoughCrystal || !hasEnoughDeuterium)
+                      ? "Not Enough Resources"
+                      : "Invalid Coordinates"}
                   </Text>
                 </View>
               )}

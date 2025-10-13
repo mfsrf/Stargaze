@@ -34,6 +34,7 @@ import {
   SHIP_BASE_COSTS,
   DEFENSE_BASE_COSTS,
   SHIP_PREREQUISITES,
+  SHIP_STATS,
 } from "../utils/gameConstants";
 import {
   calculatePlanetProduction,
@@ -365,9 +366,59 @@ const useGameStore = create<GameStore>()(
         let updatedFleets = [...state.player.fleets];
         let finalPlanets = [...updatedPlanets];
         
+        const newMessages: Message[] = [];
+        
         updatedFleets = updatedFleets.filter((fleet) => {
           // Check if fleet arrived at destination
           if (!fleet.isReturning && currentTime >= fleet.arrivalTime) {
+            // Process mission on arrival
+            if (fleet.mission === MissionType.Transport && fleet.cargo) {
+              // Find destination planet (if it's owned by player)
+              const destPlanet = finalPlanets.find(
+                (p) => p.coordinates.galaxy === fleet.destination.galaxy &&
+                       p.coordinates.system === fleet.destination.system &&
+                       p.coordinates.position === fleet.destination.position
+              );
+              
+              // Deliver cargo to destination planet
+              if (destPlanet) {
+                finalPlanets = finalPlanets.map((p) => {
+                  if (p.id === destPlanet.id) {
+                    return {
+                      ...p,
+                      resources: {
+                        metal: p.resources.metal + fleet.cargo!.metal,
+                        crystal: p.resources.crystal + fleet.cargo!.crystal,
+                        deuterium: p.resources.deuterium + fleet.cargo!.deuterium,
+                        energy: p.resources.energy,
+                      },
+                    };
+                  }
+                  return p;
+                });
+                
+                // Generate transport success message
+                newMessages.push({
+                  id: uuidv4(),
+                  type: "fleet",
+                  title: "Transport Complete",
+                  content: `Your fleet has successfully delivered resources to ${destPlanet.name} at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}].\n\nDelivered:\nMetal: ${fleet.cargo.metal.toLocaleString()}\nCrystal: ${fleet.cargo.crystal.toLocaleString()}\nDeuterium: ${fleet.cargo.deuterium.toLocaleString()}`,
+                  timestamp: currentTime,
+                  read: false,
+                });
+              } else {
+                // Could not find destination planet - maybe it's an enemy or empty position
+                newMessages.push({
+                  id: uuidv4(),
+                  type: "fleet",
+                  title: "Transport Failed",
+                  content: `Your fleet arrived at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}] but found no planet to deliver cargo. Resources will return to origin.`,
+                  timestamp: currentTime,
+                  read: false,
+                });
+              }
+            }
+            
             // Fleet arrived - mark as returning
             fleet.isReturning = true;
             return true;
@@ -390,8 +441,28 @@ const useGameStore = create<GameStore>()(
                 }
               }
               
+              // If transport mission failed, return cargo
+              let updatedResources = originPlanet.resources;
+              if (fleet.mission === MissionType.Transport && fleet.cargo) {
+                const destPlanet = finalPlanets.find(
+                  (p) => p.coordinates.galaxy === fleet.destination.galaxy &&
+                         p.coordinates.system === fleet.destination.system &&
+                         p.coordinates.position === fleet.destination.position
+                );
+                
+                // Return cargo only if destination wasn't found (failed delivery)
+                if (!destPlanet) {
+                  updatedResources = {
+                    metal: originPlanet.resources.metal + fleet.cargo.metal,
+                    crystal: originPlanet.resources.crystal + fleet.cargo.crystal,
+                    deuterium: originPlanet.resources.deuterium + fleet.cargo.deuterium,
+                    energy: originPlanet.resources.energy,
+                  };
+                }
+              }
+              
               finalPlanets = finalPlanets.map((p) => 
-                p.id === originPlanet.id ? { ...p, fleet: updatedFleet } : p
+                p.id === originPlanet.id ? { ...p, fleet: updatedFleet, resources: updatedResources } : p
               );
             }
             
@@ -408,6 +479,7 @@ const useGameStore = create<GameStore>()(
             planets: finalPlanets,
             technologies: updatedTechnologies,
             fleets: updatedFleets,
+            messages: [...newMessages, ...state.player.messages],
           },
           researchQueue: updatedResearchQueue,
           lastUpdate: currentTime,
@@ -667,6 +739,26 @@ const useGameStore = create<GameStore>()(
           }
         }
         
+        // Validate cargo if it's a transport mission
+        if (mission === MissionType.Transport && cargo) {
+          // Check if player has enough resources
+          if (cargo.metal > sourcePlanet.resources.metal) return false;
+          if (cargo.crystal > sourcePlanet.resources.crystal) return false;
+          if (cargo.deuterium > sourcePlanet.resources.deuterium) return false;
+          
+          // Check if cargo fits in ship capacity
+          const totalCargoCapacity = Object.entries(ships).reduce((total, [shipType, count]) => {
+            if (count > 0) {
+              const cargoCapacity = SHIP_STATS[shipType as ShipType]?.cargo || 0;
+              return total + (cargoCapacity * count);
+            }
+            return total;
+          }, 0);
+          
+          const totalCargoWeight = cargo.metal + cargo.crystal + cargo.deuterium;
+          if (totalCargoWeight > totalCargoCapacity) return false;
+        }
+        
         // Calculate travel time (simplified - 30 seconds per system difference)
         const galaxyDiff = Math.abs(destination.galaxy - sourcePlanet.coordinates.galaxy);
         const systemDiff = Math.abs(destination.system - sourcePlanet.coordinates.system);
@@ -694,7 +786,7 @@ const useGameStore = create<GameStore>()(
           ownerId: "player",
         };
         
-        // Deduct ships from source planet
+        // Deduct ships and cargo resources from source planet
         const updatedPlanets = state.player.planets.map((p) => {
           if (p.id === fromPlanetId) {
             const updatedFleet: FleetComposition = { ...p.fleet };
@@ -703,9 +795,19 @@ const useGameStore = create<GameStore>()(
                 updatedFleet[shipType as ShipType] -= count;
               }
             }
+            
+            // Deduct cargo resources if transport mission
+            const updatedResources = mission === MissionType.Transport && cargo ? {
+              metal: p.resources.metal - cargo.metal,
+              crystal: p.resources.crystal - cargo.crystal,
+              deuterium: p.resources.deuterium - cargo.deuterium,
+              energy: p.resources.energy,
+            } : p.resources;
+            
             return {
               ...p,
               fleet: updatedFleet,
+              resources: updatedResources,
             };
           }
           return p;
