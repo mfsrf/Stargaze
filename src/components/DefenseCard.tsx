@@ -16,6 +16,7 @@ import {
   calculateArmorPower,
 } from "../utils/gameFormulas";
 import { DEFENSE_BASE_COSTS, DEFENSE_NAMES, DEFENSE_STATS } from "../utils/gameConstants";
+import { RESPONSIVE } from "../utils/responsive";
 
 interface DefenseCardProps {
   defenseType: DefenseType;

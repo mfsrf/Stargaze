@@ -25,6 +25,7 @@ import {
 import { getPlanetTypeName, getPlanetTypeColor } from "../utils/galaxyManager";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { RESPONSIVE } from "../utils/responsive";
 
 // Ship colors from ShipCard component
 const SHIP_COLORS: Record<ShipType, string[]> = {
@@ -1004,10 +1005,18 @@ export default function PlanetScreen() {
             height: 3,
           },
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: RESPONSIVE.fonts.small,
             fontWeight: "600",
             textTransform: "none",
+            marginHorizontal: 0,
+            paddingHorizontal: 0,
           },
+          tabBarItemStyle: {
+            width: "auto",
+            minWidth: RESPONSIVE.isSmall ? 60 : 80,
+            paddingHorizontal: RESPONSIVE.isSmall ? 8 : 12,
+          },
+          tabBarScrollEnabled: true,
           swipeEnabled: true,
         }}
       >

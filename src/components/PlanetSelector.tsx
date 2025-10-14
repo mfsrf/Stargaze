@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
 import { formatNumber } from "../utils/gameFormulas";
+import { RESPONSIVE } from "../utils/responsive";
 
 export default function PlanetSelector() {
   const theme = useThemeStore((state) => state.theme);
@@ -185,7 +186,8 @@ export default function PlanetSelector() {
                 paddingHorizontal: 16,
                 borderRadius: 20,
                 marginHorizontal: 4,
-                minWidth: 120,
+                minWidth: RESPONSIVE.isSmall ? 100 : 120,
+                maxWidth: RESPONSIVE.isSmall ? 140 : 180,
                 borderWidth: 1,
                 borderColor: isSelected ? theme.colors.primary : theme.colors.border,
               }}
@@ -193,30 +195,35 @@ export default function PlanetSelector() {
               <Text
                 style={{
                   color: isSelected ? "#FFFFFF" : theme.colors.text,
-                  fontSize: 14,
+                  fontSize: RESPONSIVE.fonts.medium,
                   fontWeight: "600",
                   textAlign: "center",
                   marginBottom: 2,
                 }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 {planet.name}
               </Text>
               <Text
                 style={{
                   color: isSelected ? "#FFFFFF" : theme.colors.textSecondary,
-                  fontSize: 10,
+                  fontSize: RESPONSIVE.fonts.tiny,
                   textAlign: "center",
                 }}
+                numberOfLines={1}
               >
                 [{planet.coordinates.galaxy}:{planet.coordinates.system}:{planet.coordinates.position}]
               </Text>
               <Text
                 style={{
                   color: isSelected ? "#FFFFFF" : theme.colors.textSecondary,
-                  fontSize: 10,
+                  fontSize: RESPONSIVE.fonts.tiny,
                   textAlign: "center",
                   marginTop: 2,
                 }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 {formatNumber(planet.resources.metal + planet.resources.crystal + planet.resources.deuterium)} resources
               </Text>
