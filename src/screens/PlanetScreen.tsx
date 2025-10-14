@@ -1012,11 +1012,10 @@ export default function PlanetScreen() {
             paddingHorizontal: 0,
           },
           tabBarItemStyle: {
-            width: "auto",
-            minWidth: RESPONSIVE.isSmall ? 60 : 80,
-            paddingHorizontal: RESPONSIVE.isSmall ? 8 : 12,
+            flex: 1,
+            paddingHorizontal: RESPONSIVE.isSmall ? 4 : 8,
           },
-          tabBarScrollEnabled: true,
+          tabBarScrollEnabled: false,
           swipeEnabled: true,
         }}
       >
