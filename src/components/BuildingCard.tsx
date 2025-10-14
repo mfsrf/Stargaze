@@ -69,6 +69,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
   const upgradeBuilding = useGameStore((state) => state.upgradeBuilding);
   const instantBuild = useGameStore((state) => state.settings.instantBuild);
   const finishConstruction = useGameStore((state) => state.finishConstruction);
+  const cancelBuildingInQueue = useGameStore((state) => state.cancelBuildingInQueue);
   const resourceMultiplier = useGameStore((state) => state.settings.resourceMultiplier);
   
   if (!planet) return null;
@@ -140,9 +141,12 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
     }
   }
   
-  const isUnderConstruction =
-    planet.constructionQueue?.type === buildingType;
-  const canUpgrade = canAfford(planet.resources, cost) && !planet.constructionQueue;
+  // Check if this building is in the construction queue
+  const queueIndex = planet.constructionQueue.findIndex((item) => item.type === buildingType);
+  const isInQueue = queueIndex !== -1;
+  const queueItem = isInQueue ? planet.constructionQueue[queueIndex] : null;
+  const isUnderConstruction = queueIndex === 0; // First in queue is under construction
+  const canUpgrade = canAfford(planet.resources, cost) && planet.constructionQueue.length < 5;
   
   const handleUpgrade = () => {
     if (canUpgrade) {
@@ -157,13 +161,20 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
     }
   };
   
-  const progress = isUnderConstruction && planet.constructionQueue
-    ? ((Date.now() - planet.constructionQueue.startTime) /
-        (planet.constructionQueue.endTime - planet.constructionQueue.startTime)) * 100
+  const handleCancel = () => {
+    if (queueItem) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      cancelBuildingInQueue(planetId, queueItem.id);
+    }
+  };
+  
+  const progress = isUnderConstruction && queueItem
+    ? ((Date.now() - queueItem.startTime) /
+        (queueItem.endTime - queueItem.startTime)) * 100
     : 0;
   
-  const timeRemaining = isUnderConstruction && planet.constructionQueue
-    ? Math.max(0, planet.constructionQueue.endTime - Date.now()) / 1000
+  const timeRemaining = isUnderConstruction && queueItem
+    ? Math.max(0, queueItem.endTime - Date.now()) / 1000
     : 0;
   
   return (
@@ -256,31 +267,60 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
         </View>
       </View>
       
-      {isUnderConstruction ? (
+      {isInQueue ? (
         <View>
-          <View style={{ marginBottom: 8 }}>
-            <View
-              style={{
-                height: 6,
-                backgroundColor: theme.colors.border,
-                borderRadius: 3,
-                overflow: "hidden",
-              }}
-            >
-              <LinearGradient
-                colors={[theme.colors.success, theme.colors.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  height: "100%",
-                  width: `${progress}%`,
-                }}
-              />
+          {isUnderConstruction ? (
+            <>
+              <View style={{ marginBottom: 8 }}>
+                <View
+                  style={{
+                    height: 6,
+                    backgroundColor: theme.colors.border,
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <LinearGradient
+                    colors={[theme.colors.success, theme.colors.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      height: "100%",
+                      width: `${progress}%`,
+                    }}
+                  />
+                </View>
+              </View>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small, textAlign: "center", marginBottom: 8 }}>
+                Upgrading to Level {currentLevel + 1} - {formatDuration(timeRemaining)}
+              </Text>
+            </>
+          ) : (
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small, textAlign: "center" }}>
+                Queued (Position {queueIndex + 1}) - Level {currentLevel + 1}
+              </Text>
             </View>
-          </View>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small, textAlign: "center" }}>
-            Upgrading to Level {currentLevel + 1} - {formatDuration(timeRemaining)}
-          </Text>
+          )}
+          
+          {/* Cancel button */}
+          <TouchableOpacity
+            onPress={handleCancel}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.danger + "20",
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: theme.colors.danger + "40",
+            }}
+          >
+            <Text style={{ color: theme.colors.danger, fontSize: RESPONSIVE.fonts.medium, fontWeight: "600" }}>
+              Cancel (80% refund)
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <>
@@ -417,7 +457,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {planet.constructionQueue ? "Building..." : "Insufficient Resources"}
+                  {planet.constructionQueue.length >= 5 ? "Queue Full (5/5)" : "Insufficient Resources"}
                 </Text>
               </View>
             )}

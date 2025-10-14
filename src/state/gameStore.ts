@@ -408,7 +408,7 @@ const useGameStore = create<GameStore>()(
           aiPlayers: [],
           selectedPlanetId: null,
           initialized: false,
-          researchQueue: null,
+          researchQueue: [],
           lastUpdate: Date.now(),
           gameStartTime: 0,
         });
@@ -442,31 +442,69 @@ const useGameStore = create<GameStore>()(
             energy: productionPerSecond.energy,
           };
           
-          // Check and complete construction
+          // Process construction queue
           let updatedPlanet = { ...planet, resources: newResources };
-          if (planet.constructionQueue && currentTime >= planet.constructionQueue.endTime) {
-            const buildingType = planet.constructionQueue.type;
+          let updatedQueue = [...planet.constructionQueue];
+          
+          // Process completed buildings in queue
+          while (updatedQueue.length > 0 && currentTime >= updatedQueue[0].endTime) {
+            const completedBuilding = updatedQueue.shift()!;
             updatedPlanet.buildings = {
               ...updatedPlanet.buildings,
-              [buildingType]: updatedPlanet.buildings[buildingType] + 1,
+              [completedBuilding.type]: updatedPlanet.buildings[completedBuilding.type] + 1,
             };
-            updatedPlanet.constructionQueue = null;
             updatedPlanet.usedFields = calculateUsedFields(updatedPlanet);
+            
+            // Start next building in queue if exists
+            if (updatedQueue.length > 0 && !updatedQueue[0].startTime) {
+              updatedQueue[0] = {
+                ...updatedQueue[0],
+                startTime: currentTime,
+                endTime: currentTime + getBuildingConstructionTime(
+                  updatedQueue[0].type,
+                  updatedPlanet.buildings[updatedQueue[0].type],
+                  updatedPlanet.buildings[BuildingType.RoboticsFactory],
+                  updatedPlanet.buildings[BuildingType.NaniteFactory]
+                ) * 1000,
+              };
+            }
           }
           
+          updatedPlanet.constructionQueue = updatedQueue;
           return updatedPlanet;
         });
         
-        // Check and complete research
+        // Process research queue
         let updatedTechnologies = { ...state.player.technologies };
-        let updatedResearchQueue = state.researchQueue;
-        if (state.researchQueue && currentTime >= state.researchQueue.endTime) {
-          const techType = state.researchQueue.type;
+        let updatedResearchQueue = [...state.researchQueue];
+        
+        // Find best research lab for time calculations
+        const bestLabPlanet = updatedPlanets.reduce((best, planet) => {
+          const labLevel = planet.buildings[BuildingType.ResearchLab];
+          const bestLabLevel = best?.buildings[BuildingType.ResearchLab] || 0;
+          return labLevel > bestLabLevel ? planet : best;
+        }, updatedPlanets[0]);
+        
+        // Process completed research
+        while (updatedResearchQueue.length > 0 && currentTime >= updatedResearchQueue[0].endTime) {
+          const completedResearch = updatedResearchQueue.shift()!;
           updatedTechnologies = {
             ...updatedTechnologies,
-            [techType]: updatedTechnologies[techType] + 1,
+            [completedResearch.type]: updatedTechnologies[completedResearch.type] + 1,
           };
-          updatedResearchQueue = null;
+          
+          // Start next research in queue if exists
+          if (updatedResearchQueue.length > 0 && !updatedResearchQueue[0].startTime) {
+            updatedResearchQueue[0] = {
+              ...updatedResearchQueue[0],
+              startTime: currentTime,
+              endTime: currentTime + getTechnologyResearchTime(
+                updatedResearchQueue[0].type,
+                updatedTechnologies[updatedResearchQueue[0].type],
+                bestLabPlanet?.buildings[BuildingType.ResearchLab] || 0
+              ) * 1000,
+            };
+          }
         }
         
         // Process fleet movements
@@ -1111,7 +1149,9 @@ const useGameStore = create<GameStore>()(
       upgradeBuilding: (planetId: string, buildingType: BuildingType) => {
         const state = get();
         const planet = state.player.planets.find((p) => p.id === planetId);
-        if (!planet || planet.constructionQueue) return false;
+        
+        // Check if planet exists and queue isn't full
+        if (!planet || planet.constructionQueue.length >= 5) return false;
         
         const currentLevel = planet.buildings[buildingType];
         const cost = getBuildingCost(buildingType, currentLevel);
@@ -1129,16 +1169,23 @@ const useGameStore = create<GameStore>()(
           planet.buildings[BuildingType.NaniteFactory]
         );
         
+        const now = Date.now();
+        const isFirstInQueue = planet.constructionQueue.length === 0;
+        
+        const newQueueItem: ConstructionQueue = {
+          id: uuidv4(),
+          type: buildingType,
+          planetId: planetId,
+          startTime: isFirstInQueue ? now : 0, // 0 means queued, not started
+          endTime: isFirstInQueue ? now + constructionTime * 1000 : 0,
+        };
+        
         const updatedPlanets = state.player.planets.map((p) => {
           if (p.id === planetId) {
             return {
               ...p,
               resources: deductCost(p.resources, cost),
-              constructionQueue: {
-                type: buildingType,
-                startTime: Date.now(),
-                endTime: Date.now() + constructionTime * 1000,
-              },
+              constructionQueue: [...p.constructionQueue, newQueueItem],
             };
           }
           return p;
@@ -1154,19 +1201,37 @@ const useGameStore = create<GameStore>()(
         return true;
       },
       
-      // Finish construction manually (for immediate completion)
+      // Finish construction manually (for immediate completion with instant build)
       finishConstruction: (planetId: string) => {
         const state = get();
         const updatedPlanets = state.player.planets.map((planet) => {
-          if (planet.id === planetId && planet.constructionQueue) {
-            const buildingType = planet.constructionQueue.type;
+          if (planet.id === planetId && planet.constructionQueue.length > 0) {
+            const firstBuilding = planet.constructionQueue[0];
+            const buildingType = firstBuilding.type;
+            const remainingQueue = planet.constructionQueue.slice(1);
+            
+            // Start next building if exists
+            const now = Date.now();
+            if (remainingQueue.length > 0 && !remainingQueue[0].startTime) {
+              remainingQueue[0] = {
+                ...remainingQueue[0],
+                startTime: now,
+                endTime: now + getBuildingConstructionTime(
+                  remainingQueue[0].type,
+                  planet.buildings[remainingQueue[0].type],
+                  planet.buildings[BuildingType.RoboticsFactory],
+                  planet.buildings[BuildingType.NaniteFactory]
+                ) * 1000,
+              };
+            }
+            
             return {
               ...planet,
               buildings: {
                 ...planet.buildings,
                 [buildingType]: planet.buildings[buildingType] + 1,
               },
-              constructionQueue: null,
+              constructionQueue: remainingQueue,
               usedFields: calculateUsedFields(planet) + 1,
             };
           }
@@ -1184,7 +1249,9 @@ const useGameStore = create<GameStore>()(
       // Start research
       startResearch: (technologyType: TechnologyType) => {
         const state = get();
-        if (state.researchQueue) return false;
+        
+        // Check if queue is full (max 5)
+        if (state.researchQueue.length >= 5) return false;
         
         const currentLevel = state.player.technologies[technologyType];
         const cost = getTechnologyCost(technologyType, currentLevel);
@@ -1202,6 +1269,16 @@ const useGameStore = create<GameStore>()(
           planet.buildings[BuildingType.ResearchLab]
         );
         
+        const now = Date.now();
+        const isFirstInQueue = state.researchQueue.length === 0;
+        
+        const newQueueItem: ResearchQueue = {
+          id: uuidv4(),
+          type: technologyType,
+          startTime: isFirstInQueue ? now : 0, // 0 means queued, not started
+          endTime: isFirstInQueue ? now + researchTime * 1000 : 0,
+        };
+        
         const updatedPlanets = state.player.planets.map((p) => {
           if (p.id === planet.id) {
             return {
@@ -1217,22 +1294,47 @@ const useGameStore = create<GameStore>()(
             ...state.player,
             planets: updatedPlanets,
           },
-          researchQueue: {
-            type: technologyType,
-            startTime: Date.now(),
-            endTime: Date.now() + researchTime * 1000,
-          },
+          researchQueue: [...state.researchQueue, newQueueItem],
         });
         
         return true;
       },
       
-      // Finish research
+      // Finish research (for instant completion)
       finishResearch: () => {
         const state = get();
-        if (!state.researchQueue) return;
+        if (state.researchQueue.length === 0) return;
         
-        const techType = state.researchQueue.type;
+        const firstResearch = state.researchQueue[0];
+        const techType = firstResearch.type;
+        const remainingQueue = state.researchQueue.slice(1);
+        
+        // Find best research lab for time calculations
+        const bestLabPlanet = state.player.planets.reduce((best, planet) => {
+          const labLevel = planet.buildings[BuildingType.ResearchLab];
+          const bestLabLevel = best?.buildings[BuildingType.ResearchLab] || 0;
+          return labLevel > bestLabLevel ? planet : best;
+        }, state.player.planets[0]);
+        
+        // Start next research if exists
+        const now = Date.now();
+        if (remainingQueue.length > 0 && !remainingQueue[0].startTime) {
+          const updatedTechs = {
+            ...state.player.technologies,
+            [techType]: state.player.technologies[techType] + 1,
+          };
+          
+          remainingQueue[0] = {
+            ...remainingQueue[0],
+            startTime: now,
+            endTime: now + getTechnologyResearchTime(
+              remainingQueue[0].type,
+              updatedTechs[remainingQueue[0].type],
+              bestLabPlanet?.buildings[BuildingType.ResearchLab] || 0
+            ) * 1000,
+          };
+        }
+        
         set({
           player: {
             ...state.player,
@@ -1241,7 +1343,136 @@ const useGameStore = create<GameStore>()(
               [techType]: state.player.technologies[techType] + 1,
             },
           },
-          researchQueue: null,
+          researchQueue: remainingQueue,
+        });
+      },
+      
+      // Cancel building in queue
+      cancelBuildingInQueue: (planetId: string, queueId: string) => {
+        const state = get();
+        const planet = state.player.planets.find((p) => p.id === planetId);
+        if (!planet) return;
+        
+        const queueIndex = planet.constructionQueue.findIndex((item) => item.id === queueId);
+        if (queueIndex === -1) return;
+        
+        const canceledBuilding = planet.constructionQueue[queueIndex];
+        const buildingLevel = planet.buildings[canceledBuilding.type];
+        const cost = getBuildingCost(canceledBuilding.type, buildingLevel);
+        
+        // Refund 80% of resources
+        const refund = {
+          metal: Math.floor(cost.metal * 0.8),
+          crystal: Math.floor(cost.crystal * 0.8),
+          deuterium: Math.floor(cost.deuterium * 0.8),
+          energy: 0,
+        };
+        
+        const updatedQueue = [...planet.constructionQueue];
+        updatedQueue.splice(queueIndex, 1);
+        
+        // If we canceled the first (active) item, start the next one
+        const now = Date.now();
+        if (queueIndex === 0 && updatedQueue.length > 0 && !updatedQueue[0].startTime) {
+          updatedQueue[0] = {
+            ...updatedQueue[0],
+            startTime: now,
+            endTime: now + getBuildingConstructionTime(
+              updatedQueue[0].type,
+              planet.buildings[updatedQueue[0].type],
+              planet.buildings[BuildingType.RoboticsFactory],
+              planet.buildings[BuildingType.NaniteFactory]
+            ) * 1000,
+          };
+        }
+        
+        const updatedPlanets = state.player.planets.map((p) => {
+          if (p.id === planetId) {
+            return {
+              ...p,
+              resources: {
+                metal: p.resources.metal + refund.metal,
+                crystal: p.resources.crystal + refund.crystal,
+                deuterium: p.resources.deuterium + refund.deuterium,
+                energy: p.resources.energy,
+              },
+              constructionQueue: updatedQueue,
+            };
+          }
+          return p;
+        });
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
+      },
+      
+      // Cancel research in queue
+      cancelResearchInQueue: (queueId: string) => {
+        const state = get();
+        
+        const queueIndex = state.researchQueue.findIndex((item) => item.id === queueId);
+        if (queueIndex === -1) return;
+        
+        const canceledResearch = state.researchQueue[queueIndex];
+        const techLevel = state.player.technologies[canceledResearch.type];
+        const cost = getTechnologyCost(canceledResearch.type, techLevel);
+        
+        // Refund 80% of resources to first planet
+        const refund = {
+          metal: Math.floor(cost.metal * 0.8),
+          crystal: Math.floor(cost.crystal * 0.8),
+          deuterium: Math.floor(cost.deuterium * 0.8),
+          energy: 0,
+        };
+        
+        const updatedQueue = [...state.researchQueue];
+        updatedQueue.splice(queueIndex, 1);
+        
+        // Find best research lab for time calculations
+        const bestLabPlanet = state.player.planets.reduce((best, planet) => {
+          const labLevel = planet.buildings[BuildingType.ResearchLab];
+          const bestLabLevel = best?.buildings[BuildingType.ResearchLab] || 0;
+          return labLevel > bestLabLevel ? planet : best;
+        }, state.player.planets[0]);
+        
+        // If we canceled the first (active) item, start the next one
+        const now = Date.now();
+        if (queueIndex === 0 && updatedQueue.length > 0 && !updatedQueue[0].startTime) {
+          updatedQueue[0] = {
+            ...updatedQueue[0],
+            startTime: now,
+            endTime: now + getTechnologyResearchTime(
+              updatedQueue[0].type,
+              state.player.technologies[updatedQueue[0].type],
+              bestLabPlanet?.buildings[BuildingType.ResearchLab] || 0
+            ) * 1000,
+          };
+        }
+        
+        // Refund to first planet
+        const updatedPlanets = [...state.player.planets];
+        if (updatedPlanets.length > 0) {
+          updatedPlanets[0] = {
+            ...updatedPlanets[0],
+            resources: {
+              metal: updatedPlanets[0].resources.metal + refund.metal,
+              crystal: updatedPlanets[0].resources.crystal + refund.crystal,
+              deuterium: updatedPlanets[0].resources.deuterium + refund.deuterium,
+              energy: updatedPlanets[0].resources.energy,
+            },
+          };
+        }
+        
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+          researchQueue: updatedQueue,
         });
       },
       
@@ -1834,7 +2065,7 @@ const useGameStore = create<GameStore>()(
             ];
             
             for (const buildingType of economyBuildings) {
-              if (mainPlanet.constructionQueue) break;
+              if (mainPlanet.constructionQueue.length > 0) break;
               
               const currentLevel = mainPlanet.buildings[buildingType];
               const cost = getBuildingCost(buildingType, currentLevel);
@@ -1843,11 +2074,13 @@ const useGameStore = create<GameStore>()(
                 updatedAI.planets[0] = {
                   ...mainPlanet,
                   resources: deductCost(mainPlanet.resources, cost),
-                  constructionQueue: {
+                  constructionQueue: [{
+                    id: uuidv4(),
                     type: buildingType,
+                    planetId: mainPlanet.id,
                     startTime: currentTime,
                     endTime: currentTime + 60000, // 1 minute for AI
-                  },
+                  }],
                 };
                 break;
               }
@@ -1956,7 +2189,7 @@ const useGameStore = create<GameStore>()(
     {
       name: "game-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState: any, version: number) => {
         // Migrate from version 0 to version 1: add scoutedPlanets
         if (version === 0) {
@@ -1964,6 +2197,65 @@ const useGameStore = create<GameStore>()(
             persistedState.player.scoutedPlanets = {};
           }
         }
+        
+        // Migrate from version 1 to version 2: convert queues to arrays
+        if (version <= 1) {
+          // Convert researchQueue from single item or null to array
+          if (persistedState.researchQueue === null || persistedState.researchQueue === undefined) {
+            persistedState.researchQueue = [];
+          } else if (!Array.isArray(persistedState.researchQueue)) {
+            // Single item - convert to array with id added
+            persistedState.researchQueue = [{
+              ...persistedState.researchQueue,
+              id: uuidv4(),
+            }];
+          }
+          
+          // Convert constructionQueue for all player planets
+          if (persistedState.player?.planets) {
+            persistedState.player.planets = persistedState.player.planets.map((planet: any) => {
+              if (planet.constructionQueue === null || planet.constructionQueue === undefined) {
+                return { ...planet, constructionQueue: [] };
+              } else if (!Array.isArray(planet.constructionQueue)) {
+                // Single item - convert to array with id and planetId added
+                return {
+                  ...planet,
+                  constructionQueue: [{
+                    ...planet.constructionQueue,
+                    id: uuidv4(),
+                    planetId: planet.id,
+                  }],
+                };
+              }
+              return planet;
+            });
+          }
+          
+          // Convert constructionQueue for all AI planets
+          if (persistedState.aiPlayers) {
+            persistedState.aiPlayers = persistedState.aiPlayers.map((aiPlayer: any) => {
+              if (aiPlayer.planets) {
+                aiPlayer.planets = aiPlayer.planets.map((planet: any) => {
+                  if (planet.constructionQueue === null || planet.constructionQueue === undefined) {
+                    return { ...planet, constructionQueue: [] };
+                  } else if (!Array.isArray(planet.constructionQueue)) {
+                    return {
+                      ...planet,
+                      constructionQueue: [{
+                        ...planet.constructionQueue,
+                        id: uuidv4(),
+                        planetId: planet.id,
+                      }],
+                    };
+                  }
+                  return planet;
+                });
+              }
+              return aiPlayer;
+            });
+          }
+        }
+        
         return persistedState;
       },
       partialize: (state) => ({

@@ -62,6 +62,7 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
   const planets = useGameStore((state) => state.player.planets);
   const researchQueue = useGameStore((state) => state.researchQueue);
   const startResearch = useGameStore((state) => state.startResearch);
+  const cancelResearchInQueue = useGameStore((state) => state.cancelResearchInQueue);
   const instantBuild = useGameStore((state) => state.settings.instantBuild);
   
   const currentLevel = technologies[technologyType];
@@ -80,8 +81,12 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
     bestLabPlanet?.buildings[BuildingType.ResearchLab] || 0
   );
   
-  const isUnderResearch = researchQueue?.type === technologyType;
-  const canResearch = !researchQueue && bestLabPlanet && canAfford(bestLabPlanet.resources, cost);
+  // Check if this technology is in the research queue
+  const queueIndex = researchQueue.findIndex((item) => item.type === technologyType);
+  const isInQueue = queueIndex !== -1;
+  const queueItem = isInQueue ? researchQueue[queueIndex] : null;
+  const isUnderResearch = queueIndex === 0; // First in queue is under research
+  const canResearch = researchQueue.length < 5 && bestLabPlanet && canAfford(bestLabPlanet.resources, cost);
   
   const handleResearch = () => {
     if (canResearch) {
@@ -96,13 +101,20 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
     }
   };
   
-  const progress = isUnderResearch && researchQueue
-    ? ((Date.now() - researchQueue.startTime) /
-        (researchQueue.endTime - researchQueue.startTime)) * 100
+  const handleCancel = () => {
+    if (queueItem) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      cancelResearchInQueue(queueItem.id);
+    }
+  };
+  
+  const progress = isUnderResearch && queueItem
+    ? ((Date.now() - queueItem.startTime) /
+        (queueItem.endTime - queueItem.startTime)) * 100
     : 0;
   
-  const timeRemaining = isUnderResearch && researchQueue
-    ? Math.max(0, researchQueue.endTime - Date.now()) / 1000
+  const timeRemaining = isUnderResearch && queueItem
+    ? Math.max(0, queueItem.endTime - Date.now()) / 1000
     : 0;
   
   return (
@@ -166,31 +178,60 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
         </View>
       </View>
       
-      {isUnderResearch ? (
+      {isInQueue ? (
         <View>
-          <View style={{ marginBottom: 8 }}>
-            <View
-              style={{
-                height: 6,
-                backgroundColor: theme.colors.border,
-                borderRadius: 3,
-                overflow: "hidden",
-              }}
-            >
-              <LinearGradient
-                colors={[theme.colors.secondary, theme.colors.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  height: "100%",
-                  width: `${progress}%`,
-                }}
-              />
+          {isUnderResearch ? (
+            <>
+              <View style={{ marginBottom: 8 }}>
+                <View
+                  style={{
+                    height: 6,
+                    backgroundColor: theme.colors.border,
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <LinearGradient
+                    colors={[theme.colors.secondary, theme.colors.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{
+                      height: "100%",
+                      width: `${progress}%`,
+                    }}
+                  />
+                </View>
+              </View>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center", marginBottom: 8 }}>
+                Researching Level {currentLevel + 1} - {formatDuration(timeRemaining)}
+              </Text>
+            </>
+          ) : (
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" }}>
+                Queued (Position {queueIndex + 1}) - Level {currentLevel + 1}
+              </Text>
             </View>
-          </View>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" }}>
-            Researching Level {currentLevel + 1} - {formatDuration(timeRemaining)}
-          </Text>
+          )}
+          
+          {/* Cancel button */}
+          <TouchableOpacity
+            onPress={handleCancel}
+            activeOpacity={0.7}
+            style={{
+              backgroundColor: theme.colors.danger + "20",
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: theme.colors.danger + "40",
+            }}
+          >
+            <Text style={{ color: theme.colors.danger, fontSize: 14, fontWeight: "600" }}>
+              Cancel (80% refund)
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <>
@@ -307,16 +348,16 @@ export default function TechnologyCard({ technologyType }: TechnologyCardProps) 
                   style={{
                     color: theme.colors.textSecondary,
                     fontSize: 15,
-                    fontWeight: "600",
-                  }}
-                >
-                  {researchQueue ? "Already Researching" : "Insufficient Resources"}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  );
+                  fontWeight: "600",
+                }}
+              >
+                {researchQueue.length >= 5 ? "Queue Full (5/5)" : "Insufficient Resources"}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </>
+    )}
+  </View>
+);
 }
