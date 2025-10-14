@@ -18,7 +18,7 @@ export default function GalaxyScreen() {
   const playerPlanets = useGameStore((state) => state.player.planets);
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
   const aiPlayers = useGameStore((state) => state.aiPlayers);
-  const scoutedPlanets = useGameStore((state) => state.player.scoutedPlanets);
+  const scoutedPlanets = useGameStore((state) => state.player.scoutedPlanets || {});
   const colonizePlanet = useGameStore((state) => state.colonizePlanet);
   
   // Start at first player planet location

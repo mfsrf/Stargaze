@@ -1954,6 +1954,16 @@ const useGameStore = create<GameStore>()(
     {
       name: "game-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        // Migrate from version 0 to version 1: add scoutedPlanets
+        if (version === 0) {
+          if (persistedState.player && !persistedState.player.scoutedPlanets) {
+            persistedState.player.scoutedPlanets = {};
+          }
+        }
+        return persistedState;
+      },
       partialize: (state) => ({
         player: state.player,
         aiPlayers: state.aiPlayers,
