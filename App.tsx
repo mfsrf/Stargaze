@@ -14,6 +14,7 @@ import GalaxyScreen from "./src/screens/GalaxyScreen";
 import MessagesScreen from "./src/screens/MessagesScreen";
 import StatsScreen from "./src/screens/StatsScreen";
 import MissionsScreen from "./src/screens/MissionsScreen";
+import WikiScreen from "./src/screens/WikiScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 
 /*
@@ -80,6 +81,8 @@ function MainTabs() {
             iconName = focused ? "stats-chart" : "stats-chart-outline";
           } else if (route.name === "Missions") {
             iconName = focused ? "flag" : "flag-outline";
+          } else if (route.name === "Wiki") {
+            iconName = focused ? "book" : "book-outline";
           } else if (route.name === "Settings") {
             iconName = focused ? "settings" : "settings-outline";
           }
@@ -113,6 +116,7 @@ function MainTabs() {
           tabBarBadge: readyMissionsCount > 0 ? readyMissionsCount : undefined,
         }}
       />
+      <Tab.Screen name="Wiki" component={WikiScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
