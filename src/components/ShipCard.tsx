@@ -18,6 +18,7 @@ import {
   checkShipPrerequisites,
 } from "../utils/gameFormulas";
 import { SHIP_BASE_COSTS, SHIP_NAMES, SHIP_STATS, SHIP_PREREQUISITES, BUILDING_NAMES, TECHNOLOGY_NAMES } from "../utils/gameConstants";
+import { RESPONSIVE } from "../utils/responsive";
 
 interface ShipCardProps {
   shipType: ShipType;
@@ -192,11 +193,15 @@ export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProp
           />
         </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.text, fontSize: 17, fontWeight: "700" }}>
+          <Text 
+            style={{ color: theme.colors.text, fontSize: RESPONSIVE.fonts.large, fontWeight: "700" }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {SHIP_NAMES[shipType]}
           </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, flexWrap: "wrap" }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.medium }}>
               Available: {currentCount}
             </Text>
             <View style={{ 
@@ -461,9 +466,11 @@ export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProp
             <Text
               style={{
                 color: "#FFFFFF",
-                fontSize: 15,
+                fontSize: RESPONSIVE.fonts.medium,
                 fontWeight: "700",
               }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
             >
               Build {quantityNum} {SHIP_NAMES[shipType]}{quantityNum > 1 ? "s" : ""}
             </Text>
@@ -480,9 +487,11 @@ export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProp
             <Text
               style={{
                 color: theme.colors.textSecondary,
-                fontSize: 15,
+                fontSize: RESPONSIVE.fonts.medium,
                 fontWeight: "600",
               }}
+              numberOfLines={2}
+              adjustsFontSizeToFit
             >
               {!canBuildShip ? "Locked - Research Required" : quantityNum === 0 ? "Enter Quantity" : "Insufficient Resources"}
             </Text>

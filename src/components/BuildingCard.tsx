@@ -20,6 +20,7 @@ import {
   calculateEnergyProduction,
 } from "../utils/gameFormulas";
 import { BUILDING_NAMES, PLANET_TYPE_BONUSES, ENERGY_CONSUMPTION } from "../utils/gameConstants";
+import { RESPONSIVE } from "../utils/responsive";
 
 interface BuildingCardProps {
   buildingType: BuildingType;
@@ -182,9 +183,9 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
+            width: RESPONSIVE.isSmall ? 48 : 56,
+            height: RESPONSIVE.isSmall ? 48 : 56,
+            borderRadius: RESPONSIVE.isSmall ? 24 : 28,
             alignItems: "center",
             justifyContent: "center",
             marginRight: 12,
@@ -197,16 +198,20 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
         >
           <Ionicons
             name={BUILDING_ICONS[buildingType]}
-            size={30}
+            size={RESPONSIVE.isSmall ? 24 : 30}
             color={BUILDING_COLORS[buildingType][0]}
           />
         </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.text, fontSize: 17, fontWeight: "700" }}>
+          <Text 
+            style={{ color: theme.colors.text, fontSize: RESPONSIVE.fonts.large, fontWeight: "700" }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {BUILDING_NAMES[buildingType]}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.medium }}>
               Level {currentLevel}
             </Text>
             {currentLevel > 0 && (
@@ -217,7 +222,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 paddingVertical: 2,
                 borderRadius: 4,
               }}>
-                <Text style={{ color: theme.colors.success, fontSize: 10, fontWeight: "600" }}>
+                <Text style={{ color: theme.colors.success, fontSize: RESPONSIVE.fonts.tiny, fontWeight: "600" }}>
                   Active
                 </Text>
               </View>
@@ -226,7 +231,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
           {/* Production Info */}
           {productionInfo && (
             <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
                 {formatNumber(productionInfo.amount)}/h
               </Text>
               {productionInfo.bonus !== 1.0 && (
@@ -239,7 +244,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 }}>
                   <Text style={{ 
                     color: productionInfo.bonus > 1.0 ? theme.colors.success : theme.colors.danger, 
-                    fontSize: 9, 
+                    fontSize: RESPONSIVE.fonts.tiny, 
                     fontWeight: "600" 
                   }}>
                     {productionInfo.bonus > 1.0 ? "+" : ""}{Math.round((productionInfo.bonus - 1.0) * 100)}%
@@ -273,24 +278,24 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
               />
             </View>
           </View>
-          <Text style={{ color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small, textAlign: "center" }}>
             Upgrading to Level {currentLevel + 1} - {formatDuration(timeRemaining)}
           </Text>
         </View>
       ) : (
         <>
           <View style={{ marginBottom: 12 }}>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginBottom: 4 }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small, marginBottom: 4 }}>
               Upgrade Cost:
             </Text>
-            <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap" }}>
               {cost.metal > 0 && (
-                <View style={{ alignItems: "center" }}>
+                <View style={{ alignItems: "center", minWidth: "20%" }}>
                   <Ionicons name="hammer" size={14} color={theme.colors.metal} />
                   <Text
                     style={{
                       color: planet.resources.metal >= cost.metal ? theme.colors.text : theme.colors.danger,
-                      fontSize: 12,
+                      fontSize: RESPONSIVE.fonts.small,
                     }}
                   >
                     {formatNumber(cost.metal)}
@@ -298,12 +303,12 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 </View>
               )}
               {cost.crystal > 0 && (
-                <View style={{ alignItems: "center" }}>
+                <View style={{ alignItems: "center", minWidth: "20%" }}>
                   <Ionicons name="diamond" size={14} color={theme.colors.crystal} />
                   <Text
                     style={{
                       color: planet.resources.crystal >= cost.crystal ? theme.colors.text : theme.colors.danger,
-                      fontSize: 12,
+                      fontSize: RESPONSIVE.fonts.small,
                     }}
                   >
                     {formatNumber(cost.crystal)}
@@ -311,12 +316,12 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 </View>
               )}
               {cost.deuterium > 0 && (
-                <View style={{ alignItems: "center" }}>
+                <View style={{ alignItems: "center", minWidth: "20%" }}>
                   <Ionicons name="water" size={14} color={theme.colors.deuterium} />
                   <Text
                     style={{
                       color: planet.resources.deuterium >= cost.deuterium ? theme.colors.text : theme.colors.danger,
-                      fontSize: 12,
+                      fontSize: RESPONSIVE.fonts.small,
                     }}
                   >
                     {formatNumber(cost.deuterium)}
@@ -324,12 +329,12 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 </View>
               )}
               {isMine && nextLevelEnergyConsumption > 0 && (
-                <View style={{ alignItems: "center" }}>
+                <View style={{ alignItems: "center", minWidth: "20%" }}>
                   <Ionicons name="flash" size={14} color={theme.colors.energy} />
                   <Text
                     style={{
                       color: theme.colors.text,
-                      fontSize: 12,
+                      fontSize: RESPONSIVE.fonts.small,
                     }}
                   >
                     {formatNumber(nextLevelEnergyConsumption)}
@@ -338,7 +343,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
               )}
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 4 }}>
-              <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>
+              <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.tiny }}>
                 Time: {formatDuration(constructionTime)}
               </Text>
               {planet.buildings[BuildingType.RoboticsFactory] > 0 && (
@@ -349,7 +354,7 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                   paddingVertical: 1,
                   borderRadius: 3,
                 }}>
-                  <Text style={{ color: theme.colors.success, fontSize: 9, fontWeight: "600" }}>
+                  <Text style={{ color: theme.colors.success, fontSize: RESPONSIVE.fonts.tiny, fontWeight: "600" }}>
                     -{Math.round((1 - 1 / (1 + planet.buildings[BuildingType.RoboticsFactory])) * 100)}%
                   </Text>
                 </View>
@@ -385,9 +390,11 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 <Text
                   style={{
                     color: "#FFFFFF",
-                    fontSize: 15,
+                    fontSize: RESPONSIVE.fonts.medium,
                     fontWeight: "700",
                   }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
                   Upgrade to Level {currentLevel + 1}
                 </Text>
@@ -404,9 +411,11 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                 <Text
                   style={{
                     color: theme.colors.textSecondary,
-                    fontSize: 15,
+                    fontSize: RESPONSIVE.fonts.medium,
                     fontWeight: "600",
                   }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
                   {planet.constructionQueue ? "Building..." : "Insufficient Resources"}
                 </Text>

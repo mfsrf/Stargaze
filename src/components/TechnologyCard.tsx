@@ -16,6 +16,7 @@ import {
   formatDuration,
 } from "../utils/gameFormulas";
 import { TECHNOLOGY_NAMES } from "../utils/gameConstants";
+import { RESPONSIVE } from "../utils/responsive";
 
 interface TechnologyCardProps {
   technologyType: TechnologyType;

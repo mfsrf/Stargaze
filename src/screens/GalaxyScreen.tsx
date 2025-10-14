@@ -12,6 +12,7 @@ import SendFleetModal from "../components/SendFleetModal";
 import { Planet, ShipType, Coordinates } from "../types/game";
 import { generateSystemView, getPlanetTypeColor } from "../utils/galaxyManager";
 import { formatNumber } from "../utils/gameFormulas";
+import { RESPONSIVE } from "../utils/responsive";
 
 export default function GalaxyScreen() {
   const theme = useThemeStore((state) => state.theme);

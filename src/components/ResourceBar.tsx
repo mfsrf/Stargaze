@@ -7,6 +7,7 @@ import useGameStore from "../state/gameStore";
 import useThemeStore from "../state/themeStore";
 import { calculatePlanetProduction, formatNumber, calculateStorageCapacity } from "../utils/gameFormulas";
 import { BuildingType } from "../types/game";
+import { RESPONSIVE } from "../utils/responsive";
 
 export default React.memo(function ResourceBar() {
   const theme = useThemeStore((state) => state.theme);
@@ -60,22 +61,32 @@ export default React.memo(function ResourceBar() {
     const amountColor = isAtCapacity ? theme.colors.danger : theme.colors.text;
     
     return (
-      <View style={{ flex: 1, alignItems: "center" }}>
+      <View style={{ flex: 1, alignItems: "center", minWidth: "22%" }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
-          <Ionicons name={icon} size={16} color={color} />
-          <Text style={{ color: theme.colors.textSecondary, fontSize: 10, marginLeft: 4 }}>
+          <Ionicons name={icon} size={14} color={color} />
+          <Text 
+            style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.tiny, marginLeft: 4 }}
+            numberOfLines={1}
+          >
             {name}
           </Text>
         </View>
-        <Text style={{ color: amountColor, fontSize: 14, fontWeight: "600" }}>
+        <Text 
+          style={{ color: amountColor, fontSize: RESPONSIVE.fonts.medium, fontWeight: "600" }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
           {formatNumber(amount)}
         </Text>
         {capacity !== null && (
-          <Text style={{ color: theme.colors.textSecondary, fontSize: 9 }}>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.tiny }} numberOfLines={1}>
             / {formatNumber(capacity)}
           </Text>
         )}
-        <Text style={{ color: theme.colors.success, fontSize: 10 }}>
+        <Text 
+          style={{ color: theme.colors.success, fontSize: RESPONSIVE.fonts.tiny }}
+          numberOfLines={1}
+        >
           +{formatNumber(productionPerHour)}/h
         </Text>
       </View>
@@ -86,13 +97,13 @@ export default React.memo(function ResourceBar() {
     <View
       style={{
         backgroundColor: theme.colors.card,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
+        paddingVertical: RESPONSIVE.padding.small,
+        paddingHorizontal: RESPONSIVE.padding.medium,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
       }}
     >
-      <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap" }}>
         {renderResource(
           "Metal",
           selectedPlanet.resources.metal,
