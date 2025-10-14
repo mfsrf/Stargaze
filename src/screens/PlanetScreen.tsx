@@ -120,7 +120,7 @@ function BuildingsTab() {
           <Ionicons name="planet" size={24} color={getPlanetTypeColor(planet.type)} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "bold" }}>
-              {getPlanetTypeName(planet.type)} Planet
+              {getPlanetTypeName(planet.type)}
             </Text>
             <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 }}>
               {PLANET_TYPE_BONUSES[planet.type].description}
