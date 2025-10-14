@@ -29,6 +29,8 @@ import {
   DefenseComposition,
   Mission,
   MissionStatus,
+  ConstructionQueue,
+  ResearchQueue,
 } from "../types/game";
 import {
   STARTING_RESOURCES,
@@ -109,11 +111,11 @@ interface GameStore extends GameState {
   
   // Current selections
   selectedPlanetId: string | null;
-  researchQueue: {
-    type: TechnologyType;
-    startTime: number;
-    endTime: number;
-  } | null;
+  researchQueue: ResearchQueue[];
+  
+  // Queue management
+  cancelBuildingInQueue: (planetId: string, queueId: string) => void;
+  cancelResearchInQueue: (queueId: string) => void;
 }
 
 const createInitialPlanet = (
@@ -137,7 +139,7 @@ const createInitialPlanet = (
     maxFields: 163,
     usedFields: 0,
     lastUpdate: Date.now(),
-    constructionQueue: null,
+    constructionQueue: [],
     mineEfficiency: {
       metal: 100,
       crystal: 100,
@@ -224,7 +226,7 @@ const useGameStore = create<GameStore>()(
       gameStartTime: 0,
       initialized: false,
       selectedPlanetId: null,
-      researchQueue: null,
+      researchQueue: [],
       
       // Initialize new game
       initializeGame: (playerName: string, startGalaxy: number, aiCount: number) => {

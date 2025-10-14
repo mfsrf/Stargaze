@@ -148,12 +148,15 @@ export interface DefenseComposition {
 }
 
 export interface ConstructionQueue {
+  id: string;
   type: BuildingType;
   startTime: number;
   endTime: number;
+  planetId: string;
 }
 
 export interface ResearchQueue {
+  id: string;
   type: TechnologyType;
   startTime: number;
   endTime: number;
@@ -191,7 +194,7 @@ export interface Planet {
   maxFields: number;
   usedFields: number;
   lastUpdate: number;
-  constructionQueue: ConstructionQueue | null;
+  constructionQueue: ConstructionQueue[];
   mineEfficiency: {
     metal: number; // 0-100 (percentage)
     crystal: number; // 0-100 (percentage)
