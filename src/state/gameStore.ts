@@ -672,7 +672,7 @@ const useGameStore = create<GameStore>()(
               
               // Check AI planets too
               let targetAIPlanet: Planet | null = null;
-              let targetOwnerName = "Unknown";
+              let targetOwnerName = "Unoccupied";
               
               if (!targetPlanet) {
                 for (const aiPlayer of state.aiPlayers) {
@@ -693,77 +693,72 @@ const useGameStore = create<GameStore>()(
               
               const actualTarget = targetPlanet || targetAIPlanet;
               
-              if (actualTarget) {
-                // Build scout report
-                const scoutReport: ScoutReport = {
-                  id: uuidv4(),
-                  timestamp: currentTime,
-                  coordinates: fleet.destination,
-                  planetName: actualTarget.name,
-                  planetType: actualTarget.type,
-                  temperature: actualTarget.temperature,
-                  maxFields: actualTarget.maxFields,
-                  owner: targetOwnerName,
-                };
-                
-                // Get planet type info from constants
-                const planetTypeInfo = PLANET_TYPE_BONUSES[actualTarget.type];
-                const planetTypeName = getPlanetTypeName(actualTarget.type);
-                
-                // Build report content
-                let reportContent = `Scout Report for ${actualTarget.name}\n📍 Location: [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}]\n\n`;
-                reportContent += `🌍 PLANET CHARACTERISTICS:\n`;
-                reportContent += `  • Type: ${planetTypeName}\n`;
-                reportContent += `  • Temperature: ${actualTarget.temperature}°C\n`;
-                reportContent += `  • Fields: ${actualTarget.maxFields}\n`;
-                reportContent += `  • Owner: ${targetOwnerName}\n\n`;
-                reportContent += `📊 PRODUCTION BONUSES:\n`;
-                reportContent += `  • ${planetTypeInfo.description}\n\n`;
-                
-                // Show bonuses/penalties
-                const bonuses = [];
-                if (planetTypeInfo.metal !== 1.0) {
-                  const sign = planetTypeInfo.metal > 1.0 ? "+" : "";
-                  bonuses.push(`  • Metal: ${sign}${Math.round((planetTypeInfo.metal - 1.0) * 100)}%`);
-                }
-                if (planetTypeInfo.crystal !== 1.0) {
-                  const sign = planetTypeInfo.crystal > 1.0 ? "+" : "";
-                  bonuses.push(`  • Crystal: ${sign}${Math.round((planetTypeInfo.crystal - 1.0) * 100)}%`);
-                }
-                if (planetTypeInfo.deuterium !== 1.0) {
-                  const sign = planetTypeInfo.deuterium > 1.0 ? "+" : "";
-                  bonuses.push(`  • Deuterium: ${sign}${Math.round((planetTypeInfo.deuterium - 1.0) * 100)}%`);
-                }
-                if (planetTypeInfo.energy !== 1.0) {
-                  const sign = planetTypeInfo.energy > 1.0 ? "+" : "";
-                  bonuses.push(`  • Energy: ${sign}${Math.round((planetTypeInfo.energy - 1.0) * 100)}%`);
-                }
-                
-                if (bonuses.length > 0) {
-                  reportContent += bonuses.join("\n");
-                }
-                
-                // Generate scout message
-                newMessages.push({
-                  id: uuidv4(),
-                  type: "other",
-                  title: `🧭 Scout Report: ${actualTarget.name}`,
-                  content: reportContent,
-                  timestamp: currentTime,
-                  read: false,
-                  data: scoutReport,
-                });
-              } else {
-                // No planet found
-                newMessages.push({
-                  id: uuidv4(),
-                  type: "other",
-                  title: "🧭 Scout: No Target",
-                  content: `Your scouts arrived at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}] but found no planet.\n\nThe position is empty.`,
-                  timestamp: currentTime,
-                  read: false,
-                });
+              // Generate planet info even if empty position
+              const position = fleet.destination.position;
+              const planetType = getPlanetType(position);
+              const temperature = calculateTemperature(position);
+              const maxFields = Math.floor(150 + Math.random() * 100); // 150-250 fields
+              const planetName = actualTarget?.name || `Position ${position}`;
+              
+              // Build scout report
+              const scoutReport: ScoutReport = {
+                id: uuidv4(),
+                timestamp: currentTime,
+                coordinates: fleet.destination,
+                planetName: planetName,
+                planetType: planetType,
+                temperature: temperature,
+                maxFields: maxFields,
+                owner: actualTarget ? targetOwnerName : null,
+              };
+              
+              // Get planet type info from constants
+              const planetTypeInfo = PLANET_TYPE_BONUSES[planetType];
+              const planetTypeName = getPlanetTypeName(planetType);
+              
+              // Build report content
+              let reportContent = `Scout Report for ${planetName}\n📍 Location: [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}]\n\n`;
+              reportContent += `🌍 PLANET CHARACTERISTICS:\n`;
+              reportContent += `  • Type: ${planetTypeName}\n`;
+              reportContent += `  • Temperature: ${temperature}°C\n`;
+              reportContent += `  • Fields: ${maxFields}\n`;
+              reportContent += `  • Status: ${actualTarget ? `Occupied by ${targetOwnerName}` : "Unoccupied - Available for colonization"}\n\n`;
+              reportContent += `📊 PRODUCTION BONUSES:\n`;
+              reportContent += `  • ${planetTypeInfo.description}\n\n`;
+              
+              // Show bonuses/penalties
+              const bonuses = [];
+              if (planetTypeInfo.metal !== 1.0) {
+                const sign = planetTypeInfo.metal > 1.0 ? "+" : "";
+                bonuses.push(`  • Metal: ${sign}${Math.round((planetTypeInfo.metal - 1.0) * 100)}%`);
               }
+              if (planetTypeInfo.crystal !== 1.0) {
+                const sign = planetTypeInfo.crystal > 1.0 ? "+" : "";
+                bonuses.push(`  • Crystal: ${sign}${Math.round((planetTypeInfo.crystal - 1.0) * 100)}%`);
+              }
+              if (planetTypeInfo.deuterium !== 1.0) {
+                const sign = planetTypeInfo.deuterium > 1.0 ? "+" : "";
+                bonuses.push(`  • Deuterium: ${sign}${Math.round((planetTypeInfo.deuterium - 1.0) * 100)}%`);
+              }
+              if (planetTypeInfo.energy !== 1.0) {
+                const sign = planetTypeInfo.energy > 1.0 ? "+" : "";
+                bonuses.push(`  • Energy: ${sign}${Math.round((planetTypeInfo.energy - 1.0) * 100)}%`);
+              }
+              
+              if (bonuses.length > 0) {
+                reportContent += bonuses.join("\n");
+              }
+              
+              // Generate scout message
+              newMessages.push({
+                id: uuidv4(),
+                type: "other",
+                title: `🧭 Scout Report: ${planetName}`,
+                content: reportContent,
+                timestamp: currentTime,
+                read: false,
+                data: scoutReport,
+              });
             }
             
             // Process attack missions
