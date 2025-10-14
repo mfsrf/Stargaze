@@ -43,6 +43,7 @@ const Tab = createBottomTabNavigator();
 function MainTabs() {
   const theme = useThemeStore((state) => state.theme);
   const missions = useGameStore((state) => state.player.missions || []);
+  const messages = useGameStore((state) => state.player.messages || []);
   const planets = useGameStore((state) => state.player.planets);
   
   // Count ready missions
@@ -59,6 +60,9 @@ function MainTabs() {
       return false;
     });
   }).length;
+  
+  // Count unread messages
+  const unreadMessagesCount = messages.filter((msg) => !msg.read).length;
   
   return (
     <Tab.Navigator
@@ -94,7 +98,13 @@ function MainTabs() {
     >
       <Tab.Screen name="Planet" component={PlanetScreen} />
       <Tab.Screen name="Galaxy" component={GalaxyScreen} />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen 
+        name="Messages" 
+        component={MessagesScreen}
+        options={{
+          tabBarBadge: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
+        }}
+      />
       <Tab.Screen name="Stats" component={StatsScreen} />
       <Tab.Screen 
         name="Missions" 

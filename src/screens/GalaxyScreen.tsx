@@ -18,6 +18,7 @@ export default function GalaxyScreen() {
   const playerPlanets = useGameStore((state) => state.player.planets);
   const selectedPlanetId = useGameStore((state) => state.selectedPlanetId);
   const aiPlayers = useGameStore((state) => state.aiPlayers);
+  const scoutedPlanets = useGameStore((state) => state.player.scoutedPlanets);
   const colonizePlanet = useGameStore((state) => state.colonizePlanet);
   
   // Start at first player planet location
@@ -428,6 +429,11 @@ export default function GalaxyScreen() {
           const isOccupied = position.planet !== null;
           const planetTypeColor = isOccupied && position.planet ? getPlanetTypeColor(position.planet.type) : theme.colors.textSecondary;
           
+          // Check if this empty position has been scouted
+          const coordKey = `${position.coordinates.galaxy}:${position.coordinates.system}:${position.coordinates.position}`;
+          const scoutReport = !isOccupied ? scoutedPlanets[coordKey] : null;
+          const hasScoutData = scoutReport !== undefined;
+          
           return (
             <TouchableOpacity
               key={`${position.coordinates.galaxy}-${position.coordinates.system}-${position.coordinates.position}`}
@@ -448,6 +454,8 @@ export default function GalaxyScreen() {
                   ? theme.colors.success
                   : isOccupied
                   ? planetTypeColor
+                  : hasScoutData
+                  ? theme.colors.primary + "60"
                   : theme.colors.border,
               }}
             >
@@ -458,16 +466,16 @@ export default function GalaxyScreen() {
                       width: 40,
                       height: 40,
                       borderRadius: 20,
-                      backgroundColor: isOccupied ? planetTypeColor + "30" : theme.colors.border,
+                      backgroundColor: isOccupied ? planetTypeColor + "30" : hasScoutData ? theme.colors.primary + "20" : theme.colors.border,
                       alignItems: "center",
                       justifyContent: "center",
                       marginRight: 12,
                     }}
                   >
                     <Ionicons
-                      name={isOccupied ? "planet" : "ellipse-outline"}
+                      name={isOccupied ? "planet" : hasScoutData ? "planet-outline" : "ellipse-outline"}
                       size={24}
-                      color={isOccupied ? planetTypeColor : theme.colors.textSecondary}
+                      color={isOccupied ? planetTypeColor : hasScoutData ? theme.colors.primary : theme.colors.textSecondary}
                     />
                   </View>
                   
@@ -488,6 +496,15 @@ export default function GalaxyScreen() {
                           }}
                         >
                           {position.playerName} • {position.planet?.maxFields} fields
+                        </Text>
+                      </>
+                    ) : hasScoutData && scoutReport ? (
+                      <>
+                        <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                          {scoutReport.planetName}
+                        </Text>
+                        <Text style={{ color: theme.colors.primary, fontSize: 11, marginTop: 2 }}>
+                          🧭 Scouted • {scoutReport.maxFields} fields • {scoutReport.temperature}°C
                         </Text>
                       </>
                     ) : (

@@ -309,6 +309,7 @@ export interface Player {
   fleets: Fleet[];
   messages: Message[];
   exploredSystems: string[]; // Format: "galaxy:system"
+  scoutedPlanets: Record<string, ScoutReport>; // Format: "galaxy:system:position" -> ScoutReport
   missions: Mission[];
   totalPoints: number;
   economyPoints: number;

@@ -205,6 +205,7 @@ const useGameStore = create<GameStore>()(
         fleets: [],
         messages: [],
         exploredSystems: [],
+        scoutedPlanets: {},
         missions: [],
         totalPoints: 0,
         economyPoints: 0,
@@ -246,6 +247,7 @@ const useGameStore = create<GameStore>()(
           fleets: [],
           messages: [],
           exploredSystems: [`${startCoordinates.galaxy}:${startCoordinates.system}`], // Start with home system explored
+          scoutedPlanets: {},
           missions: createInitialMissions(),
           totalPoints: 0,
           economyPoints: 0,
@@ -394,6 +396,7 @@ const useGameStore = create<GameStore>()(
             fleets: [],
             messages: [],
             exploredSystems: [],
+            scoutedPlanets: {},
             missions: [],
             totalPoints: 0,
             economyPoints: 0,
@@ -748,6 +751,10 @@ const useGameStore = create<GameStore>()(
               if (bonuses.length > 0) {
                 reportContent += bonuses.join("\n");
               }
+              
+              // Store scout report in player's scouted planets record
+              const coordKey = `${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}`;
+              state.player.scoutedPlanets[coordKey] = scoutReport;
               
               // Generate scout message
               newMessages.push({
