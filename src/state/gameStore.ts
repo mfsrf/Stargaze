@@ -68,6 +68,7 @@ interface GameStore extends GameState {
   // Resource management
   updateResources: () => void;
   addResourcesToPlanet: (planetId: string, amount: number) => void;
+  calculatePlayerPoints: () => void;
   
   // Building management
   upgradeBuilding: (planetId: string, buildingType: BuildingType) => boolean;
@@ -1138,6 +1139,9 @@ const useGameStore = create<GameStore>()(
           lastUpdate: currentTime,
         });
         
+        // Calculate player points
+        get().calculatePlayerPoints();
+        
         // Update AI after player resources
         get().updateAI();
         
@@ -1974,6 +1978,80 @@ const useGameStore = create<GameStore>()(
           player: {
             ...state.player,
             planets: updatedPlanets,
+          },
+        });
+      },
+      
+      // Calculate player points (economy, research, military, total)
+      calculatePlayerPoints: () => {
+        const state = get();
+        let economyPoints = 0;
+        let researchPoints = 0;
+        let militaryPoints = 0;
+        
+        // Calculate economy points from buildings
+        state.player.planets.forEach((planet) => {
+          Object.entries(planet.buildings).forEach(([buildingType, level]) => {
+            if (level > 0) {
+              const cost = getBuildingCost(buildingType as BuildingType, level - 1);
+              // Sum all costs for this level and all previous levels
+              for (let i = 0; i < level; i++) {
+                const levelCost = getBuildingCost(buildingType as BuildingType, i);
+                economyPoints += (levelCost.metal + levelCost.crystal + levelCost.deuterium) / 1000;
+              }
+            }
+          });
+        });
+        
+        // Calculate research points from technologies
+        Object.entries(state.player.technologies).forEach(([techType, level]) => {
+          if (level > 0) {
+            // Sum all costs for this level and all previous levels
+            for (let i = 0; i < level; i++) {
+              const levelCost = getTechnologyCost(techType as TechnologyType, i);
+              researchPoints += (levelCost.metal + levelCost.crystal + levelCost.deuterium) / 1000;
+            }
+          }
+        });
+        
+        // Calculate military points from fleet and defense
+        state.player.planets.forEach((planet) => {
+          // Fleet points
+          Object.entries(planet.fleet).forEach(([shipType, count]) => {
+            if (count > 0) {
+              const shipCost = SHIP_BASE_COSTS[shipType as ShipType];
+              militaryPoints += ((shipCost.metal + shipCost.crystal + shipCost.deuterium) * count) / 1000;
+            }
+          });
+          
+          // Defense points
+          Object.entries(planet.defense).forEach(([defenseType, count]) => {
+            if ((count as number) > 0) {
+              const defenseCost = DEFENSE_BASE_COSTS[defenseType as DefenseType];
+              militaryPoints += ((defenseCost.metal + defenseCost.crystal + defenseCost.deuterium) * (count as number)) / 1000;
+            }
+          });
+        });
+        
+        // Add active fleets to military points
+        state.player.fleets.forEach((fleet) => {
+          Object.entries(fleet.ships).forEach(([shipType, count]) => {
+            if (count > 0) {
+              const shipCost = SHIP_BASE_COSTS[shipType as ShipType];
+              militaryPoints += ((shipCost.metal + shipCost.crystal + shipCost.deuterium) * count) / 1000;
+            }
+          });
+        });
+        
+        const totalPoints = Math.floor(economyPoints + researchPoints + militaryPoints);
+        
+        set({
+          player: {
+            ...state.player,
+            economyPoints: Math.floor(economyPoints),
+            researchPoints: Math.floor(researchPoints),
+            militaryPoints: Math.floor(militaryPoints),
+            totalPoints,
           },
         });
       },
