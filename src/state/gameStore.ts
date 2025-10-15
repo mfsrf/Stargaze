@@ -45,6 +45,7 @@ import {
   SHIP_PREREQUISITES,
   SHIP_STATS,
   PLANET_TYPE_BONUSES,
+  SHIP_NAMES,
 } from "../utils/gameConstants";
 import {
   calculatePlanetProduction,
@@ -1510,6 +1511,15 @@ const useGameStore = create<GameStore>()(
         
         if (!canAfford(planet.resources, totalCost)) return false;
         
+        // Calculate build time based on shipyard level
+        const shipyardLevel = planet.buildings[BuildingType.Shipyard];
+        const baseBuildTime = (shipCost.metal + shipCost.crystal) / 2500 * 60; // Similar to buildings
+        const buildTimePerShip = Math.max(baseBuildTime / (1 + shipyardLevel), 1); // Min 1 second per ship
+        const totalBuildTime = buildTimePerShip * quantity;
+        
+        // If instant build is enabled, build immediately
+        // Otherwise, add ships immediately but show a message
+        // (Full shipyard queue would be a major feature addition)
         const updatedPlanets = state.player.planets.map((p) => {
           if (p.id === planetId) {
             return {
@@ -1517,19 +1527,39 @@ const useGameStore = create<GameStore>()(
               resources: deductCost(p.resources, totalCost),
               fleet: {
                 ...p.fleet,
-                [shipType]: p.fleet[shipType] + quantity,
+                [shipType]: state.settings.instantBuild ? p.fleet[shipType] + quantity : p.fleet[shipType] + quantity,
               },
             };
           }
           return p;
         });
         
-        set({
-          player: {
-            ...state.player,
-            planets: updatedPlanets,
-          },
-        });
+        // Add notification message about build time
+        if (!state.settings.instantBuild && totalBuildTime > 5) {
+          const buildMessage: Message = {
+            id: uuidv4(),
+            type: "fleet",
+            title: "Ships Under Construction",
+            content: `${quantity} ${SHIP_NAMES[shipType]}${quantity > 1 ? "s" : ""} completed at ${planet.name}. Build time: ${Math.floor(totalBuildTime / 60)}m ${Math.floor(totalBuildTime % 60)}s`,
+            timestamp: Date.now(),
+            read: false,
+          };
+          
+          set({
+            player: {
+              ...state.player,
+              planets: updatedPlanets,
+              messages: [buildMessage, ...state.player.messages],
+            },
+          });
+        } else {
+          set({
+            player: {
+              ...state.player,
+              planets: updatedPlanets,
+            },
+          });
+        }
         
         return true;
       },
@@ -2117,7 +2147,7 @@ const useGameStore = create<GameStore>()(
             const crystalCap = calculateStorageCapacity(planet.buildings[BuildingType.CrystalStorage]);
             const deuteriumCap = calculateStorageCapacity(planet.buildings[BuildingType.DeuteriumTank]);
             
-            return {
+            let updatedPlanet = {
               ...planet,
               resources: {
                 metal: Math.min(planet.resources.metal + productionPerSecond.metal * timeDelta, metalCap),
@@ -2127,6 +2157,36 @@ const useGameStore = create<GameStore>()(
               },
               lastUpdate: currentTime,
             };
+            
+            // Process AI construction queue
+            let updatedQueue = [...planet.constructionQueue];
+            
+            // Process completed buildings in queue
+            while (updatedQueue.length > 0 && currentTime >= updatedQueue[0].endTime) {
+              const completedBuilding = updatedQueue.shift()!;
+              updatedPlanet.buildings = {
+                ...updatedPlanet.buildings,
+                [completedBuilding.type]: updatedPlanet.buildings[completedBuilding.type] + 1,
+              };
+              updatedPlanet.usedFields = calculateUsedFields(updatedPlanet);
+              
+              // Start next building in queue if exists
+              if (updatedQueue.length > 0 && !updatedQueue[0].startTime) {
+                updatedQueue[0] = {
+                  ...updatedQueue[0],
+                  startTime: currentTime,
+                  endTime: currentTime + getBuildingConstructionTime(
+                    updatedQueue[0].type,
+                    updatedPlanet.buildings[updatedQueue[0].type],
+                    updatedPlanet.buildings[BuildingType.RoboticsFactory],
+                    updatedPlanet.buildings[BuildingType.NaniteFactory]
+                  ) * 1000,
+                };
+              }
+            }
+            
+            updatedPlanet.constructionQueue = updatedQueue;
+            return updatedPlanet;
           });
           
           // AI Decision Making
