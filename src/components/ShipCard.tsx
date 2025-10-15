@@ -11,6 +11,7 @@ import { ShipType, TechnologyType, BuildingType } from "../types/game";
 import {
   canAfford,
   formatNumber,
+  formatDuration,
   calculateShipSpeed,
   calculateAttackPower,
   calculateShieldPower,
@@ -155,6 +156,25 @@ export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProp
       setQuantity(maxAffordable.toString());
     }
   };
+  
+  // Check if this ship type is in the shipyard queue
+  const queueItem = planet.shipyardQueue.find((item) => item.shipType === shipType);
+  const isBuilding = !!queueItem;
+  
+  let progress = 0;
+  let timeRemaining = 0;
+  
+  if (isBuilding && queueItem) {
+    // Calculate progress for current ship being built
+    const shipCost = SHIP_BASE_COSTS[shipType];
+    const shipyardLevel = planet.buildings[BuildingType.Shipyard];
+    const baseBuildTime = (shipCost.metal + shipCost.crystal) / 2500 * 60;
+    const buildTimePerShip = Math.max(baseBuildTime / (1 + shipyardLevel), 1);
+    const shipStartTime = queueItem.endTime - buildTimePerShip * 1000;
+    
+    progress = ((Date.now() - shipStartTime) / (queueItem.endTime - shipStartTime)) * 100;
+    timeRemaining = Math.max(0, queueItem.endTime - Date.now()) / 1000;
+  }
   
   return (
     <View
@@ -345,6 +365,45 @@ export default React.memo(function ShipCard({ shipType, planetId }: ShipCardProp
           )}
         </View>
       </View>
+      
+      {/* Building Progress */}
+      {isBuilding && queueItem && (
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ marginBottom: 8 }}>
+            <View
+              style={{
+                height: 6,
+                backgroundColor: theme.colors.border,
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  height: "100%",
+                  width: `${Math.min(100, Math.max(0, progress))}%`,
+                }}
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+              Building: {queueItem.built + 1} / {queueItem.quantity}
+            </Text>
+            <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: "600" }}>
+              {formatDuration(timeRemaining)}
+            </Text>
+          </View>
+          {queueItem.quantity - queueItem.built > 1 && (
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginTop: 4 }}>
+              {queueItem.quantity - queueItem.built - 1} more in queue
+            </Text>
+          )}
+        </View>
+      )}
       
       {/* Quantity Input */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 }}>

@@ -31,6 +31,7 @@ import {
   MissionStatus,
   ConstructionQueue,
   ResearchQueue,
+  ShipyardQueue,
 } from "../types/game";
 import {
   STARTING_RESOURCES,
@@ -142,6 +143,7 @@ const createInitialPlanet = (
     usedFields: 0,
     lastUpdate: Date.now(),
     constructionQueue: [],
+    shipyardQueue: [],
     mineEfficiency: {
       metal: 100,
       crystal: 100,
@@ -473,6 +475,40 @@ const useGameStore = create<GameStore>()(
           }
           
           updatedPlanet.constructionQueue = updatedQueue;
+          
+          // Process shipyard queue
+          let updatedShipyardQueue = [...planet.shipyardQueue];
+          
+          // Process ship building
+          while (updatedShipyardQueue.length > 0 && currentTime >= updatedShipyardQueue[0].endTime) {
+            const buildingShip = updatedShipyardQueue[0];
+            
+            // Complete one ship
+            buildingShip.built++;
+            updatedPlanet.fleet = {
+              ...updatedPlanet.fleet,
+              [buildingShip.shipType]: updatedPlanet.fleet[buildingShip.shipType] + 1,
+            };
+            
+            // Check if all ships in this order are complete
+            if (buildingShip.built >= buildingShip.quantity) {
+              // Remove completed order
+              updatedShipyardQueue.shift();
+            } else {
+              // Calculate next ship completion time
+              const shipCost = SHIP_BASE_COSTS[buildingShip.shipType];
+              const shipyardLevel = updatedPlanet.buildings[BuildingType.Shipyard];
+              const baseBuildTime = (shipCost.metal + shipCost.crystal) / 2500 * 60;
+              const buildTimePerShip = Math.max(baseBuildTime / (1 + shipyardLevel), 1);
+              
+              updatedShipyardQueue[0] = {
+                ...buildingShip,
+                endTime: currentTime + buildTimePerShip * 1000,
+              };
+            }
+          }
+          
+          updatedPlanet.shipyardQueue = updatedShipyardQueue;
           return updatedPlanet;
         });
         
@@ -1513,53 +1549,54 @@ const useGameStore = create<GameStore>()(
         
         // Calculate build time based on shipyard level
         const shipyardLevel = planet.buildings[BuildingType.Shipyard];
-        const baseBuildTime = (shipCost.metal + shipCost.crystal) / 2500 * 60; // Similar to buildings
+        const baseBuildTime = (shipCost.metal + shipCost.crystal) / 2500 * 60; // seconds
         const buildTimePerShip = Math.max(baseBuildTime / (1 + shipyardLevel), 1); // Min 1 second per ship
         const totalBuildTime = buildTimePerShip * quantity;
         
-        // If instant build is enabled, build immediately
-        // Otherwise, add ships immediately but show a message
-        // (Full shipyard queue would be a major feature addition)
+        const now = Date.now();
+        const isInstantBuild = state.settings.instantBuild;
+        
         const updatedPlanets = state.player.planets.map((p) => {
           if (p.id === planetId) {
-            return {
-              ...p,
-              resources: deductCost(p.resources, totalCost),
-              fleet: {
-                ...p.fleet,
-                [shipType]: state.settings.instantBuild ? p.fleet[shipType] + quantity : p.fleet[shipType] + quantity,
-              },
-            };
+            if (isInstantBuild) {
+              // Instant build - add ships immediately
+              return {
+                ...p,
+                resources: deductCost(p.resources, totalCost),
+                fleet: {
+                  ...p.fleet,
+                  [shipType]: p.fleet[shipType] + quantity,
+                },
+              };
+            } else {
+              // Add to shipyard queue
+              const newQueueItem: ShipyardQueue = {
+                id: uuidv4(),
+                shipType,
+                quantity,
+                built: 0,
+                startTime: now,
+                endTime: now + buildTimePerShip * 1000, // Time for first ship
+                totalBuildTime: totalBuildTime * 1000,
+                planetId,
+              };
+              
+              return {
+                ...p,
+                resources: deductCost(p.resources, totalCost),
+                shipyardQueue: [...p.shipyardQueue, newQueueItem],
+              };
+            }
           }
           return p;
         });
         
-        // Add notification message about build time
-        if (!state.settings.instantBuild && totalBuildTime > 5) {
-          const buildMessage: Message = {
-            id: uuidv4(),
-            type: "fleet",
-            title: "Ships Under Construction",
-            content: `${quantity} ${SHIP_NAMES[shipType]}${quantity > 1 ? "s" : ""} completed at ${planet.name}. Build time: ${Math.floor(totalBuildTime / 60)}m ${Math.floor(totalBuildTime % 60)}s`,
-            timestamp: Date.now(),
-            read: false,
-          };
-          
-          set({
-            player: {
-              ...state.player,
-              planets: updatedPlanets,
-              messages: [buildMessage, ...state.player.messages],
-            },
-          });
-        } else {
-          set({
-            player: {
-              ...state.player,
-              planets: updatedPlanets,
-            },
-          });
-        }
+        set({
+          player: {
+            ...state.player,
+            planets: updatedPlanets,
+          },
+        });
         
         return true;
       },
@@ -2327,7 +2364,7 @@ const useGameStore = create<GameStore>()(
     {
       name: "game-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
         // Migrate from version 0 to version 1: add scoutedPlanets
         if (version === 0) {
@@ -2385,6 +2422,34 @@ const useGameStore = create<GameStore>()(
                         planetId: planet.id,
                       }],
                     };
+                  }
+                  return planet;
+                });
+              }
+              return aiPlayer;
+            });
+          }
+        }
+        
+        // Migrate from version 2 to version 3: add shipyardQueue
+        if (version <= 2) {
+          // Add shipyardQueue to all player planets
+          if (persistedState.player?.planets) {
+            persistedState.player.planets = persistedState.player.planets.map((planet: any) => {
+              if (!planet.shipyardQueue) {
+                return { ...planet, shipyardQueue: [] };
+              }
+              return planet;
+            });
+          }
+          
+          // Add shipyardQueue to all AI planets
+          if (persistedState.aiPlayers) {
+            persistedState.aiPlayers = persistedState.aiPlayers.map((aiPlayer: any) => {
+              if (aiPlayer.planets) {
+                aiPlayer.planets = aiPlayer.planets.map((planet: any) => {
+                  if (!planet.shipyardQueue) {
+                    return { ...planet, shipyardQueue: [] };
                   }
                   return planet;
                 });

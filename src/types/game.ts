@@ -162,6 +162,17 @@ export interface ResearchQueue {
   endTime: number;
 }
 
+export interface ShipyardQueue {
+  id: string;
+  shipType: ShipType;
+  quantity: number;
+  built: number; // How many have been completed so far
+  startTime: number;
+  endTime: number; // Time when current ship completes
+  totalBuildTime: number; // Total time for all ships
+  planetId: string;
+}
+
 export enum PlanetType {
   // Standard planets (original)
   Frozen = "frozen",        // Positions 1-3
@@ -195,6 +206,7 @@ export interface Planet {
   usedFields: number;
   lastUpdate: number;
   constructionQueue: ConstructionQueue[];
+  shipyardQueue: ShipyardQueue[];
   mineEfficiency: {
     metal: number; // 0-100 (percentage)
     crystal: number; // 0-100 (percentage)
