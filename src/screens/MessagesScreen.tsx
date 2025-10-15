@@ -331,69 +331,99 @@ export default function MessagesScreen() {
             </View>
           ) : (
             messages.map((message) => (
-              <TouchableOpacity
+              <View
                 key={message.id}
-                onPress={() => handleMessagePress(message.id)}
-                onLongPress={() => handleDeleteMessage(message.id)}
-                activeOpacity={0.7}
                 style={{
                   backgroundColor: message.read ? theme.colors.card : theme.colors.primary + "10",
                   borderRadius: 12,
-                  padding: 16,
                   marginBottom: 12,
                   borderWidth: 1,
                   borderColor: message.read ? theme.colors.border : theme.colors.primary + "40",
+                  overflow: "hidden",
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <View style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: getMessageColor(message.type) + "20",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 12,
-                  }}>
-                    <Ionicons 
-                      name={getMessageIcon(message.type) as keyof typeof Ionicons.glyphMap} 
-                      size={20} 
-                      color={getMessageColor(message.type)} 
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-                      <Text style={{ 
-                        color: theme.colors.text, 
-                        fontSize: 15, 
-                        fontWeight: message.read ? "600" : "700",
-                        flex: 1,
-                      }}>
-                        {message.title}
-                      </Text>
-                      {!message.read && (
-                        <View style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: theme.colors.primary,
-                        }} />
-                      )}
-                    </View>
-                    <Text style={{ 
-                      color: theme.colors.textSecondary, 
-                      fontSize: 13, 
-                      lineHeight: 18,
-                      marginBottom: 6,
+                <TouchableOpacity
+                  onPress={() => handleMessagePress(message.id)}
+                  activeOpacity={0.7}
+                  style={{
+                    padding: 16,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: getMessageColor(message.type) + "20",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
                     }}>
-                      {message.content}
-                    </Text>
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
-                      {new Date(message.timestamp).toLocaleString()}
+                      <Ionicons 
+                        name={getMessageIcon(message.type) as keyof typeof Ionicons.glyphMap} 
+                        size={20} 
+                        color={getMessageColor(message.type)} 
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                        <Text style={{ 
+                          color: theme.colors.text, 
+                          fontSize: 15, 
+                          fontWeight: message.read ? "600" : "700",
+                          flex: 1,
+                        }}>
+                          {message.title}
+                        </Text>
+                        {!message.read && (
+                          <View style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: theme.colors.primary,
+                          }} />
+                        )}
+                      </View>
+                      <Text style={{ 
+                        color: theme.colors.textSecondary, 
+                        fontSize: 13, 
+                        lineHeight: 18,
+                        marginBottom: 6,
+                      }}>
+                        {message.content}
+                      </Text>
+                      <Text style={{ color: theme.colors.textSecondary, fontSize: 11 }}>
+                        {new Date(message.timestamp).toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+                
+                {/* Delete Button */}
+                <TouchableOpacity
+                  onPress={() => handleDeleteMessage(message.id)}
+                  activeOpacity={0.7}
+                  style={{
+                    backgroundColor: theme.colors.danger + "15",
+                    paddingVertical: 10,
+                    alignItems: "center",
+                    borderTopWidth: 1,
+                    borderTopColor: theme.colors.border,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                    <Text style={{ 
+                      color: theme.colors.danger, 
+                      fontSize: 13, 
+                      fontWeight: "600",
+                      marginLeft: 6,
+                    }}>
+                      Delete Message
                     </Text>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             ))
           )
         )}

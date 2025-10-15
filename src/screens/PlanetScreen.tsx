@@ -506,12 +506,12 @@ function ShipyardTab() {
   ];
   
   const civilShips = [
+    ShipType.EspionageProbe,
+    ShipType.Scout,
     ShipType.SmallCargo,
     ShipType.LargeCargo,
     ShipType.ColonyShip,
     ShipType.Recycler,
-    ShipType.EspionageProbe,
-    ShipType.Scout,
   ];
   
   return (

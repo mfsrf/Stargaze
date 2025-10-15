@@ -291,8 +291,8 @@ export const STARTING_RESOURCES: Resources = {
   energy: 0,
 };
 
-// Base construction time in seconds (reduced for mobile)
-export const BASE_CONSTRUCTION_TIME = 60; // 1 minute base
+// Base construction time in seconds (reduced by 20% for faster gameplay)
+export const BASE_CONSTRUCTION_TIME = 48; // 48 seconds base (was 60)
 
 // Resource multiplier for faster gameplay
 export const DEFAULT_RESOURCE_MULTIPLIER = 10;
