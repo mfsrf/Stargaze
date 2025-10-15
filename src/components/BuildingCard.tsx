@@ -84,7 +84,9 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
   );
   
   // Calculate energy consumption for next level (for mines)
+  let currentEnergyConsumption = 0;
   let nextLevelEnergyConsumption = 0;
+  let additionalEnergyConsumption = 0;
   const isMine = buildingType === BuildingType.MetalMine || 
                  buildingType === BuildingType.CrystalMine || 
                  buildingType === BuildingType.DeuteriumSynthesizer;
@@ -101,7 +103,11 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
       consumptionRate = ENERGY_CONSUMPTION.deuteriumSynthesizer;
     }
     
+    currentEnergyConsumption = currentLevel > 0 
+      ? Math.floor(currentLevel * consumptionRate * Math.pow(1.1, currentLevel))
+      : 0;
     nextLevelEnergyConsumption = Math.floor(nextLevel * consumptionRate * Math.pow(1.1, nextLevel));
+    additionalEnergyConsumption = nextLevelEnergyConsumption - currentEnergyConsumption;
   }
   
   // Calculate production info for resource buildings
@@ -368,16 +374,16 @@ export default React.memo(function BuildingCard({ buildingType, planetId }: Buil
                   </Text>
                 </View>
               )}
-              {isMine && nextLevelEnergyConsumption > 0 && (
+              {isMine && additionalEnergyConsumption > 0 && (
                 <View style={{ alignItems: "center", minWidth: "20%" }}>
-                  <Ionicons name="flash" size={14} color={theme.colors.energy} />
+                  <Ionicons name="flash" size={14} color={theme.colors.warning} />
                   <Text
                     style={{
-                      color: theme.colors.text,
+                      color: theme.colors.warning,
                       fontSize: RESPONSIVE.fonts.small,
                     }}
                   >
-                    {formatNumber(nextLevelEnergyConsumption)}
+                    +{formatNumber(additionalEnergyConsumption)}
                   </Text>
                 </View>
               )}
