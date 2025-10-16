@@ -2160,8 +2160,8 @@ const useGameStore = create<GameStore>()(
             ai = { ...ai, personality };
           }
           
-          // Only update AI every 30 seconds to 2 minutes based on difficulty
-          const updateInterval = ai.difficulty === "easy" ? 120000 : ai.difficulty === "medium" ? 60000 : 30000;
+          // Only update AI every 10-30 seconds based on difficulty (faster than before)
+          const updateInterval = ai.difficulty === "easy" ? 30000 : ai.difficulty === "medium" ? 20000 : 10000;
           if (currentTime - ai.lastActionTime < updateInterval) {
             return ai;
           }
@@ -2230,8 +2230,8 @@ const useGameStore = create<GameStore>()(
           const mainPlanet = updatedAI.planets[0];
           if (!mainPlanet) return updatedAI;
           
-          // 1. Build Economy (if personality.economy is high)
-          if (Math.random() < updatedAI.personality.economy) {
+          // 1. Build Economy (if personality.economy is high and queue isn't full)
+          if (updatedAI.personality.economy > 0.5 && mainPlanet.constructionQueue.length < 5) {
             const economyBuildings = [
               BuildingType.MetalMine,
               BuildingType.CrystalMine,
@@ -2239,36 +2239,86 @@ const useGameStore = create<GameStore>()(
               BuildingType.SolarPlant,
             ];
             
+            // Prioritize buildings that need upgrades most
             for (const buildingType of economyBuildings) {
-              if (mainPlanet.constructionQueue.length > 0) break;
-              
               const currentLevel = mainPlanet.buildings[buildingType];
               const cost = getBuildingCost(buildingType, currentLevel);
               
               if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+                const now = Date.now();
+                const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+                
+                const newQueueItem: ConstructionQueue = {
+                  id: uuidv4(),
+                  type: buildingType,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + 60000 : 0, // 1 minute for AI (first item only)
+                };
+                
                 updatedAI.planets[0] = {
                   ...mainPlanet,
                   resources: deductCost(mainPlanet.resources, cost),
-                  constructionQueue: [{
+                  constructionQueue: [...mainPlanet.constructionQueue, newQueueItem],
+                };
+                break; // Only add one building per update
+              }
+            }
+          }
+          
+          // 1.5. Build Essential Infrastructure (Robotics Factory, Shipyard, etc.)
+          if (mainPlanet.constructionQueue.length < 5) {
+            // Check if we need Robotics Factory
+            if (mainPlanet.buildings[BuildingType.RoboticsFactory] === 0) {
+              const cost = getBuildingCost(BuildingType.RoboticsFactory, 0);
+              if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+                const now = Date.now();
+                const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+                
+                updatedAI.planets[0] = {
+                  ...mainPlanet,
+                  resources: deductCost(mainPlanet.resources, cost),
+                  constructionQueue: [...mainPlanet.constructionQueue, {
                     id: uuidv4(),
-                    type: buildingType,
+                    type: BuildingType.RoboticsFactory,
                     planetId: mainPlanet.id,
-                    startTime: currentTime,
-                    endTime: currentTime + 60000, // 1 minute for AI
+                    startTime: isFirstInQueue ? now : 0,
+                    endTime: isFirstInQueue ? now + 60000 : 0,
                   }],
                 };
-                break;
+              }
+            }
+            // Check if we need Shipyard
+            else if (mainPlanet.buildings[BuildingType.Shipyard] === 0 && 
+                     mainPlanet.buildings[BuildingType.RoboticsFactory] >= 2) {
+              const cost = getBuildingCost(BuildingType.Shipyard, 0);
+              if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+                const now = Date.now();
+                const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+                
+                updatedAI.planets[0] = {
+                  ...mainPlanet,
+                  resources: deductCost(mainPlanet.resources, cost),
+                  constructionQueue: [...mainPlanet.constructionQueue, {
+                    id: uuidv4(),
+                    type: BuildingType.Shipyard,
+                    planetId: mainPlanet.id,
+                    startTime: isFirstInQueue ? now : 0,
+                    endTime: isFirstInQueue ? now + 60000 : 0,
+                  }],
+                };
               }
             }
           }
           
           // 2. Build Military (if personality.aggression is high)
-          if (Math.random() < updatedAI.personality.aggression && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
+          if (updatedAI.personality.aggression > 0.4 && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
             const shipType = ai.strategy === "aggressive" ? ShipType.LightFighter : ShipType.SmallCargo;
             const shipCost = SHIP_BASE_COSTS[shipType];
-            const quantity = Math.floor(mainPlanet.resources.metal / shipCost.metal);
+            const affordableQuantity = Math.floor(mainPlanet.resources.metal / shipCost.metal);
+            const quantity = Math.min(affordableQuantity, 10); // Max 10 at a time
             
-            if (quantity > 0 && quantity <= 10) {
+            if (quantity > 0) {
               const totalCost = {
                 metal: shipCost.metal * quantity,
                 crystal: shipCost.crystal * quantity,
