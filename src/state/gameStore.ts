@@ -2227,91 +2227,120 @@ const useGameStore = create<GameStore>()(
           });
           
           // AI Decision Making
-          const mainPlanet = updatedAI.planets[0];
+          let mainPlanet = updatedAI.planets[0];
           if (!mainPlanet) return updatedAI;
           
-          // 1. Build Economy (if personality.economy is high and queue isn't full)
-          if (updatedAI.personality.economy > 0.5 && mainPlanet.constructionQueue.length < 5) {
-            const economyBuildings = [
-              BuildingType.MetalMine,
-              BuildingType.CrystalMine,
-              BuildingType.DeuteriumSynthesizer,
-              BuildingType.SolarPlant,
-            ];
+          // Priority 1: Build Robotics Factory if we don't have one
+          if (mainPlanet.buildings[BuildingType.RoboticsFactory] === 0 && mainPlanet.constructionQueue.length < 5) {
+            const cost = getBuildingCost(BuildingType.RoboticsFactory, 0);
+            if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+              const now = Date.now();
+              const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              
+              mainPlanet = {
+                ...mainPlanet,
+                resources: deductCost(mainPlanet.resources, cost),
+                constructionQueue: [...mainPlanet.constructionQueue, {
+                  id: uuidv4(),
+                  type: BuildingType.RoboticsFactory,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + 60000 : 0,
+                }],
+              };
+              updatedAI.planets[0] = mainPlanet;
+            }
+          }
+          
+          // Priority 2: Build Shipyard once Robotics Factory is level 2+
+          if (mainPlanet.buildings[BuildingType.Shipyard] === 0 && 
+              mainPlanet.buildings[BuildingType.RoboticsFactory] >= 2 && 
+              mainPlanet.constructionQueue.length < 5) {
+            const cost = getBuildingCost(BuildingType.Shipyard, 0);
+            if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+              const now = Date.now();
+              const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              
+              mainPlanet = {
+                ...mainPlanet,
+                resources: deductCost(mainPlanet.resources, cost),
+                constructionQueue: [...mainPlanet.constructionQueue, {
+                  id: uuidv4(),
+                  type: BuildingType.Shipyard,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + 60000 : 0,
+                }],
+              };
+              updatedAI.planets[0] = mainPlanet;
+            }
+          }
+          
+          // Priority 3: Build Economy (always try to upgrade mines and energy)
+          if (mainPlanet.constructionQueue.length < 5) {
+            // Determine which building to upgrade based on current levels
+            let targetBuilding: BuildingType | null = null;
             
-            // Prioritize buildings that need upgrades most
-            for (const buildingType of economyBuildings) {
-              const currentLevel = mainPlanet.buildings[buildingType];
-              const cost = getBuildingCost(buildingType, currentLevel);
+            const metalLevel = mainPlanet.buildings[BuildingType.MetalMine];
+            const crystalLevel = mainPlanet.buildings[BuildingType.CrystalMine];
+            const deuteriumLevel = mainPlanet.buildings[BuildingType.DeuteriumSynthesizer];
+            const solarLevel = mainPlanet.buildings[BuildingType.SolarPlant];
+            
+            // Smart building priority
+            if (solarLevel < metalLevel + crystalLevel + deuteriumLevel) {
+              // Need more energy
+              targetBuilding = BuildingType.SolarPlant;
+            } else if (metalLevel < 10) {
+              // Prioritize metal early game
+              targetBuilding = BuildingType.MetalMine;
+            } else if (crystalLevel < 8) {
+              // Need crystal
+              targetBuilding = BuildingType.CrystalMine;
+            } else if (deuteriumLevel < 6) {
+              // Need deuterium
+              targetBuilding = BuildingType.DeuteriumSynthesizer;
+            } else if (metalLevel < 20) {
+              // Continue metal
+              targetBuilding = BuildingType.MetalMine;
+            } else if (crystalLevel < 15) {
+              // Continue crystal
+              targetBuilding = BuildingType.CrystalMine;
+            } else if (deuteriumLevel < 12) {
+              // Continue deuterium
+              targetBuilding = BuildingType.DeuteriumSynthesizer;
+            } else {
+              // Round-robin
+              const lowest = Math.min(metalLevel, crystalLevel, deuteriumLevel);
+              if (metalLevel === lowest) targetBuilding = BuildingType.MetalMine;
+              else if (crystalLevel === lowest) targetBuilding = BuildingType.CrystalMine;
+              else targetBuilding = BuildingType.DeuteriumSynthesizer;
+            }
+            
+            if (targetBuilding) {
+              const currentLevel = mainPlanet.buildings[targetBuilding];
+              const cost = getBuildingCost(targetBuilding, currentLevel);
               
               if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
                 const now = Date.now();
                 const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
                 
-                const newQueueItem: ConstructionQueue = {
-                  id: uuidv4(),
-                  type: buildingType,
-                  planetId: mainPlanet.id,
-                  startTime: isFirstInQueue ? now : 0,
-                  endTime: isFirstInQueue ? now + 60000 : 0, // 1 minute for AI (first item only)
-                };
-                
-                updatedAI.planets[0] = {
-                  ...mainPlanet,
-                  resources: deductCost(mainPlanet.resources, cost),
-                  constructionQueue: [...mainPlanet.constructionQueue, newQueueItem],
-                };
-                break; // Only add one building per update
-              }
-            }
-          }
-          
-          // 1.5. Build Essential Infrastructure (Robotics Factory, Shipyard, etc.)
-          if (mainPlanet.constructionQueue.length < 5) {
-            // Check if we need Robotics Factory
-            if (mainPlanet.buildings[BuildingType.RoboticsFactory] === 0) {
-              const cost = getBuildingCost(BuildingType.RoboticsFactory, 0);
-              if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
-                const now = Date.now();
-                const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
-                
-                updatedAI.planets[0] = {
+                mainPlanet = {
                   ...mainPlanet,
                   resources: deductCost(mainPlanet.resources, cost),
                   constructionQueue: [...mainPlanet.constructionQueue, {
                     id: uuidv4(),
-                    type: BuildingType.RoboticsFactory,
+                    type: targetBuilding,
                     planetId: mainPlanet.id,
                     startTime: isFirstInQueue ? now : 0,
                     endTime: isFirstInQueue ? now + 60000 : 0,
                   }],
                 };
-              }
-            }
-            // Check if we need Shipyard
-            else if (mainPlanet.buildings[BuildingType.Shipyard] === 0 && 
-                     mainPlanet.buildings[BuildingType.RoboticsFactory] >= 2) {
-              const cost = getBuildingCost(BuildingType.Shipyard, 0);
-              if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
-                const now = Date.now();
-                const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
-                
-                updatedAI.planets[0] = {
-                  ...mainPlanet,
-                  resources: deductCost(mainPlanet.resources, cost),
-                  constructionQueue: [...mainPlanet.constructionQueue, {
-                    id: uuidv4(),
-                    type: BuildingType.Shipyard,
-                    planetId: mainPlanet.id,
-                    startTime: isFirstInQueue ? now : 0,
-                    endTime: isFirstInQueue ? now + 60000 : 0,
-                  }],
-                };
+                updatedAI.planets[0] = mainPlanet;
               }
             }
           }
           
-          // 2. Build Military (if personality.aggression is high)
+          // Priority 4: Build Military (if aggressive and have shipyard)
           if (updatedAI.personality.aggression > 0.4 && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
             const shipType = ai.strategy === "aggressive" ? ShipType.LightFighter : ShipType.SmallCargo;
             const shipCost = SHIP_BASE_COSTS[shipType];
@@ -2327,7 +2356,7 @@ const useGameStore = create<GameStore>()(
               };
               
               if (canAfford(mainPlanet.resources, totalCost)) {
-                updatedAI.planets[0] = {
+                mainPlanet = {
                   ...mainPlanet,
                   resources: deductCost(mainPlanet.resources, totalCost),
                   fleet: {
@@ -2335,11 +2364,12 @@ const useGameStore = create<GameStore>()(
                     [shipType]: mainPlanet.fleet[shipType] + quantity,
                   },
                 };
+                updatedAI.planets[0] = mainPlanet;
               }
             }
           }
           
-          // 3. Send Attack Fleet (if aggressive and has enough ships)
+          // Priority 5: Send Attack Fleet (if aggressive and has enough ships)
           if (Math.random() < updatedAI.personality.aggression * 0.5) {
             const totalFighters = mainPlanet.fleet[ShipType.LightFighter] + mainPlanet.fleet[ShipType.HeavyFighter];
             
