@@ -1099,9 +1099,16 @@ const useGameStore = create<GameStore>()(
               }
             }
             
-            // Fleet arrived - mark as returning
-            fleet.isReturning = true;
-            return true;
+            // Fleet arrived - handle return or hold
+            if (fleet.mission === MissionType.Hold) {
+              // Stay at destination and do not return
+              fleet.isReturning = false;
+              fleet.returnTime = undefined;
+              return true;
+            } else {
+              fleet.isReturning = true;
+              return true;
+            }
           }
           
           // Check if fleet returned home
@@ -1692,7 +1699,7 @@ const useGameStore = create<GameStore>()(
         
         const now = Date.now();
         const arrivalTime = now + actualTravelTime;
-        const returnTime = arrivalTime + actualTravelTime;
+        const returnTime = mission === MissionType.Hold ? undefined : (arrivalTime + actualTravelTime);
         
         // Create fleet
         const newFleet: Fleet = {

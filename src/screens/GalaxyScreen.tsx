@@ -73,6 +73,65 @@ export default function GalaxyScreen() {
     setIsPlanetModalVisible(true);
   };
   
+  const buildScoutedPlanet = (report: any): Planet => {
+    return {
+      id: `scouted-${report.coordinates.galaxy}-${report.coordinates.system}-${report.coordinates.position}`,
+      name: report.planetName,
+      coordinates: report.coordinates,
+      type: report.planetType,
+      temperature: report.temperature,
+      resources: { metal: 0, crystal: 0, deuterium: 0, energy: 0 },
+      buildings: {
+        metalMine: 0,
+        crystalMine: 0,
+        deuteriumSynthesizer: 0,
+        solarPlant: 0,
+        fusionReactor: 0,
+        metalStorage: 0,
+        crystalStorage: 0,
+        deuteriumTank: 0,
+        roboticsFactory: 0,
+        shipyard: 0,
+        researchLab: 0,
+        allianceDepot: 0,
+        naniteFactory: 0,
+        terraformer: 0,
+      },
+      defense: {
+        rocketLauncher: 0,
+        lightLaser: 0,
+        heavyLaser: 0,
+        gaussCannon: 0,
+        ionCannon: 0,
+        plasmaTurret: 0,
+        smallShieldDome: 0,
+        largeShieldDome: 0,
+      },
+      fleet: {
+        lightFighter: 0,
+        heavyFighter: 0,
+        cruiser: 0,
+        battleship: 0,
+        battlecruiser: 0,
+        bomber: 0,
+        destroyer: 0,
+        deathstar: 0,
+        smallCargo: 0,
+        largeCargo: 0,
+        colonyShip: 0,
+        recycler: 0,
+        espionageProbe: 0,
+        scout: 0,
+      },
+      maxFields: report.maxFields || 200,
+      usedFields: 0,
+      lastUpdate: Date.now(),
+      constructionQueue: [],
+      shipyardQueue: [],
+      mineEfficiency: { metal: 100, crystal: 100, deuterium: 100 },
+    };
+  };
+  
   const handleFindRandomEnemy = () => {
     if (aiPlanets.length === 0) return;
     
@@ -518,44 +577,7 @@ export default function GalaxyScreen() {
                 
                 {/* Action Buttons */}
                 <View style={{ flexDirection: "row", gap: 8 }}>
-                  {isOccupied && !isPlayerPlanet && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleAttackClick(position.coordinates);
-                      }}
-                      activeOpacity={0.7}
-                      style={{
-                        backgroundColor: theme.colors.danger + "20",
-                        padding: 8,
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Ionicons name="rocket" size={18} color={theme.colors.danger} />
-                    </TouchableOpacity>
-                  )}
-                  {!isOccupied && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleColonizeClick(position.coordinates);
-                      }}
-                      disabled={!hasColonyShip}
-                      activeOpacity={0.7}
-                      style={{
-                        backgroundColor: hasColonyShip ? theme.colors.success + "20" : theme.colors.border,
-                        padding: 8,
-                        borderRadius: 8,
-                        opacity: hasColonyShip ? 1 : 0.5,
-                      }}
-                    >
-                      <Ionicons 
-                        name={hasColonyShip ? "add-circle" : "lock-closed"} 
-                        size={18} 
-                        color={hasColonyShip ? theme.colors.success : theme.colors.textSecondary} 
-                      />
-                    </TouchableOpacity>
-                  )}
+undefined
                   {/* Scout Button for empty positions */}
                   {!isOccupied && (
                     <TouchableOpacity
