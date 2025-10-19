@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -125,6 +126,14 @@ function MainTabs() {
 export default function App() {
   const initialized = useGameStore((state) => state.initialized);
   const theme = useThemeStore((state) => state.theme);
+  const updateResources = useGameStore((state) => state.updateResources);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateResources();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [updateResources]);
   
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

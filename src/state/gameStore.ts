@@ -551,6 +551,199 @@ const useGameStore = create<GameStore>()(
         
         const newMessages: Message[] = [];
         
+        // Process AI fleet movements (attacks on player)
+        const updatedAIPlayersForFleets = state.aiPlayers.map((ai) => {
+          let aiCopy = { ...ai };
+          let aiPlanets = aiCopy.planets.map((p) => ({ ...p }));
+          let aiFleets = (aiCopy.fleets || []).map((f) => ({ ...f }));
+          
+          aiFleets = aiFleets.filter((fleet) => {
+            // AI fleet arrives at destination
+            if (!fleet.isReturning && currentTime >= fleet.arrivalTime) {
+              if (fleet.mission === MissionType.Attack) {
+                // Find target player planet
+                const targetIndex = finalPlanets.findIndex(
+                  (p) => p.coordinates.galaxy === fleet.destination.galaxy &&
+                          p.coordinates.system === fleet.destination.system &&
+                          p.coordinates.position === fleet.destination.position
+                );
+                
+                if (targetIndex !== -1) {
+                  const targetPlanet = finalPlanets[targetIndex];
+                  
+                  // Calculate combat power
+                  let attackerPower = 0;
+                  let defenderPower = 0;
+                  
+                  Object.entries(fleet.ships).forEach(([shipType, count]) => {
+                    const stats = SHIP_STATS[shipType as ShipType];
+                    if (stats && count > 0) attackerPower += stats.attack * count;
+                  });
+                  
+                  Object.entries(targetPlanet.fleet).forEach(([shipType, count]) => {
+                    const stats = SHIP_STATS[shipType as ShipType];
+                    if (stats && (count as number) > 0) defenderPower += stats.attack * (count as number);
+                  });
+                  
+                  Object.entries(targetPlanet.defense).forEach(([defType, count]) => {
+                    if ((count as number) > 0) defenderPower += 100 * (count as number) * 1.5;
+                  });
+                  
+                  const attackerWins = attackerPower > defenderPower;
+                  
+                  // Losses
+                  const attackerLosses: FleetComposition = {} as FleetComposition;
+                  const defenderShipLosses: FleetComposition = {} as FleetComposition;
+                  const defenderDefenseLosses: DefenseComposition = {} as DefenseComposition;
+                  
+                  if (attackerWins) {
+                    Object.entries(fleet.ships).forEach(([shipType, count]) => {
+                      const lossPercent = Math.random() * 0.3;
+                      attackerLosses[shipType as ShipType] = Math.floor(count * lossPercent);
+                    });
+                    Object.entries(targetPlanet.fleet).forEach(([shipType, count]) => {
+                      const lossPercent = 0.7 + Math.random() * 0.3;
+                      defenderShipLosses[shipType as ShipType] = Math.floor((count as number) * lossPercent);
+                    });
+                    Object.entries(targetPlanet.defense).forEach(([defType, count]) => {
+                      const lossPercent = 0.5 + Math.random() * 0.3;
+                      defenderDefenseLosses[defType as DefenseType] = Math.floor((count as number) * lossPercent);
+                    });
+                  } else {
+                    Object.entries(fleet.ships).forEach(([shipType, count]) => {
+                      const lossPercent = 0.7 + Math.random() * 0.3;
+                      attackerLosses[shipType as ShipType] = Math.floor(count * lossPercent);
+                    });
+                    Object.entries(targetPlanet.fleet).forEach(([shipType, count]) => {
+                      const lossPercent = Math.random() * 0.3;
+                      defenderShipLosses[shipType as ShipType] = Math.floor((count as number) * lossPercent);
+                    });
+                    Object.entries(targetPlanet.defense).forEach(([defType, count]) => {
+                      const lossPercent = Math.random() * 0.2;
+                      defenderDefenseLosses[defType as DefenseType] = Math.floor((count as number) * lossPercent);
+                    });
+                  }
+                  
+                  // Apply attacker losses to fleet
+                  Object.entries(attackerLosses).forEach(([shipType, losses]) => {
+                    fleet.ships[shipType as ShipType] = Math.max(0, fleet.ships[shipType as ShipType] - losses);
+                  });
+                  
+                  // Plunder if attacker wins
+                  let plunder: Resources | undefined;
+                  if (attackerWins) {
+                    const maxPlunder = Object.entries(fleet.ships).reduce((total, [shipType, count]) => {
+                      const cargo = SHIP_STATS[shipType as ShipType]?.cargo || 0;
+                      return total + cargo * count;
+                    }, 0);
+                    const availableResources = targetPlanet.resources.metal + targetPlanet.resources.crystal + targetPlanet.resources.deuterium;
+                    const plunderAmount = Math.min(maxPlunder * 0.5, availableResources * 0.5);
+                    
+                    plunder = {
+                      metal: Math.floor(targetPlanet.resources.metal * 0.5 * (plunderAmount / Math.max(availableResources, 1))),
+                      crystal: Math.floor(targetPlanet.resources.crystal * 0.5 * (plunderAmount / Math.max(availableResources, 1))),
+                      deuterium: Math.floor(targetPlanet.resources.deuterium * 0.5 * (plunderAmount / Math.max(availableResources, 1))),
+                      energy: 0,
+                    };
+                    
+                    // Deduct plunder from player planet
+                    finalPlanets[targetIndex] = {
+                      ...targetPlanet,
+                      resources: {
+                        metal: targetPlanet.resources.metal - plunder.metal,
+                        crystal: targetPlanet.resources.crystal - plunder.crystal,
+                        deuterium: targetPlanet.resources.deuterium - plunder.deuterium,
+                        energy: targetPlanet.resources.energy,
+                      },
+                      // Apply defender losses
+                      fleet: Object.keys(targetPlanet.fleet).reduce((acc, key) => {
+                        const k = key as keyof typeof targetPlanet.fleet;
+                        acc[k] = Math.max(0, targetPlanet.fleet[k] - (defenderShipLosses[k as ShipType] || 0));
+                        return acc;
+                      }, { ...targetPlanet.fleet }),
+                      defense: Object.keys(targetPlanet.defense).reduce((acc: any, key) => {
+                        const k = key as keyof typeof targetPlanet.defense;
+                        acc[k] = Math.max(0, (targetPlanet.defense[k] as number) - (defenderDefenseLosses[k as DefenseType] || 0));
+                        return acc;
+                      }, { ...targetPlanet.defense }),
+                    } as Planet;
+                    
+                    // Add to fleet cargo
+                    fleet.cargo = plunder;
+                  }
+                  
+                  // Message to player
+                  const totalAttacker = Object.values(attackerLosses).reduce((s, c) => s + (c || 0), 0);
+                  const totalDefenderShips = Object.values(defenderShipLosses).reduce((s, c) => s + (c || 0), 0);
+                  const totalDefenderDef = Object.values(defenderDefenseLosses).reduce((s, c) => s + (c || 0), 0);
+                  let report = `Enemy Attack on ${finalPlanets[targetIndex].name}\n`;
+                  report += `📍 [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}]\n`;
+                  report += `Result: ${attackerWins ? "Defeat" : "Victory"}\n\n`;
+                  report += `Your Losses: ${totalDefenderShips} ships, ${totalDefenderDef} defenses\n`;
+                  report += `Enemy Losses: ${totalAttacker} ships\n`;
+                  if (plunder) {
+                    const totalPlunder = plunder.metal + plunder.crystal + plunder.deuterium;
+                    report += `\nPlundered: ${totalPlunder.toLocaleString()} (M:${plunder.metal.toLocaleString()} C:${plunder.crystal.toLocaleString()} D:${plunder.deuterium.toLocaleString()})`;
+                  }
+                  newMessages.push({
+                    id: uuidv4(),
+                    type: "combat",
+                    title: attackerWins ? "⚠ Enemy Victory" : "✅ Enemy Defeated",
+                    content: report,
+                    timestamp: currentTime,
+                    read: false,
+                  });
+                } else {
+                  // No target found
+                  newMessages.push({
+                    id: uuidv4(),
+                    type: "fleet",
+                    title: "Enemy Fleet Arrived",
+                    content: `An enemy fleet arrived at [${fleet.destination.galaxy}:${fleet.destination.system}:${fleet.destination.position}] but found no planet.`,
+                    timestamp: currentTime,
+                    read: false,
+                  });
+                }
+              }
+              
+              // Start return
+              fleet.isReturning = true;
+              if (!fleet.returnTime) {
+                const outbound = fleet.arrivalTime - fleet.departureTime;
+                fleet.returnTime = currentTime + outbound;
+              }
+              return true;
+            }
+            
+            // AI fleet returns home
+            if (fleet.isReturning && fleet.returnTime && currentTime >= fleet.returnTime) {
+              const originIndex = aiPlanets.findIndex(
+                (p) => p.coordinates.galaxy === fleet.origin.galaxy &&
+                        p.coordinates.system === fleet.origin.system &&
+                        p.coordinates.position === fleet.origin.position
+              );
+              if (originIndex !== -1) {
+                const origin = aiPlanets[originIndex];
+                const updatedFleet: FleetComposition = { ...origin.fleet } as FleetComposition;
+                Object.entries(fleet.ships).forEach(([shipType, count]) => {
+                  if (count > 0) {
+                    const st = shipType as ShipType;
+                    updatedFleet[st] = (updatedFleet[st] || 0) + count;
+                  }
+                });
+                aiPlanets[originIndex] = { ...origin, fleet: updatedFleet };
+              }
+              return false; // remove fleet
+            }
+            
+            return true; // keep fleet
+          });
+          
+          aiCopy.planets = aiPlanets;
+          aiCopy.fleets = aiFleets;
+          return aiCopy;
+        });
+        
         updatedFleets = updatedFleets.filter((fleet) => {
           // Check if fleet arrived at destination
           if (!fleet.isReturning && currentTime >= fleet.arrivalTime) {
@@ -1179,6 +1372,7 @@ const useGameStore = create<GameStore>()(
             fleets: updatedFleets,
             messages: [...newMessages, ...state.player.messages],
           },
+          aiPlayers: updatedAIPlayersForFleets,
           researchQueue: updatedResearchQueue,
           lastUpdate: currentTime,
         });
