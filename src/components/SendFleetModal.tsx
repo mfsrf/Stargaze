@@ -21,11 +21,36 @@ interface SendFleetModalProps {
 export default function SendFleetModal({ visible, onClose, planetId, targetCoordinates }: SendFleetModalProps) {
   const theme = useThemeStore((state) => state.theme);
   const planets = useGameStore((state) => state.player.planets);
+  const aiPlayers = useGameStore((state) => state.aiPlayers);
+  const scoutedPlanets = useGameStore((state) => state.player.scoutedPlanets || {});
   const sendFleet = useGameStore((state) => state.sendFleet);
   
   const planet = planets.find((p) => p.id === planetId);
   
-  const [selectedMission, setSelectedMission] = useState<MissionType>(MissionType.Attack);
+  // Determine target context
+  const coordKey = targetCoordinates ? `${targetCoordinates.galaxy}:${targetCoordinates.system}:${targetCoordinates.position}` : "";
+  const destIsPlayerPlanet = !!planets.find(
+    (p) => p.coordinates.galaxy === (targetCoordinates?.galaxy || 0) &&
+           p.coordinates.system === (targetCoordinates?.system || 0) &&
+           p.coordinates.position === (targetCoordinates?.position || 0)
+  );
+  const destIsAIPlanet = aiPlayers.some((ai) =>
+    ai.planets.some(
+      (p) => p.coordinates.galaxy === (targetCoordinates?.galaxy || 0) &&
+             p.coordinates.system === (targetCoordinates?.system || 0) &&
+             p.coordinates.position === (targetCoordinates?.position || 0)
+    )
+  );
+  const destIsOccupied = destIsPlayerPlanet || destIsAIPlanet;
+  const destIsScouted = coordKey ? !!scoutedPlanets[coordKey] : false;
+  
+  const [selectedMission, setSelectedMission] = useState<MissionType>(destIsOccupied ? MissionType.Attack : MissionType.Scout);
+  
+  useEffect(() => {
+    if (!targetCoordinates) return;
+    if (destIsOccupied) setSelectedMission(MissionType.Attack);
+    else setSelectedMission(MissionType.Scout);
+  }, [coordKey]);
   const [targetGalaxy, setTargetGalaxy] = useState(targetCoordinates?.galaxy.toString() || "1");
   const [targetSystem, setTargetSystem] = useState(targetCoordinates?.system.toString() || "1");
   const [targetPosition, setTargetPosition] = useState(targetCoordinates?.position.toString() || "1");
@@ -169,10 +194,11 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
   };
   
   const missions = [
-    { type: MissionType.Attack, icon: "rocket", label: "Attack", color: theme.colors.danger },
-    { type: MissionType.Transport, icon: "cube", label: "Transport", color: theme.colors.primary },
-    { type: MissionType.Espionage, icon: "eye", label: "Spy", color: theme.colors.secondary },
-    { type: MissionType.Scout, icon: "compass", label: "Scout", color: theme.colors.success },
+    { type: MissionType.Attack, icon: "rocket", label: "Attack", color: theme.colors.danger, disabled: !destIsOccupied },
+    { type: MissionType.Transport, icon: "cube", label: "Transport", color: theme.colors.primary, disabled: !destIsOccupied },
+    { type: MissionType.Espionage, icon: "eye", label: "Spy", color: theme.colors.secondary, disabled: !destIsOccupied },
+    { type: MissionType.Scout, icon: "compass", label: "Scout", color: theme.colors.success, disabled: destIsOccupied },
+    { type: MissionType.Hold, icon: "home", label: "Transfer", color: theme.colors.success, disabled: !destIsPlayerPlanet },
   ];
   
   return (
@@ -240,25 +266,28 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
               </Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
                 {missions.map((mission) => (
-                  <TouchableOpacity
-                    key={mission.type}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedMission(mission.type);
-                    }}
-                    activeOpacity={0.7}
-                    style={{
-                      flex: 1,
-                      backgroundColor:
-                        selectedMission === mission.type ? mission.color + "20" : theme.colors.card,
-                      borderWidth: 2,
-                      borderColor:
-                        selectedMission === mission.type ? mission.color : theme.colors.border,
-                      borderRadius: 12,
-                      padding: 12,
-                      alignItems: "center",
-                    }}
-                  >
+                    <TouchableOpacity
+                      key={mission.type}
+                      onPress={() => {
+                        if (mission.disabled) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSelectedMission(mission.type);
+                      }}
+                      activeOpacity={0.7}
+                      disabled={mission.disabled}
+                      style={{
+                        flex: 1,
+                        backgroundColor:
+                          mission.disabled ? theme.colors.border : (selectedMission === mission.type ? mission.color + "20" : theme.colors.card),
+                        borderWidth: 2,
+                        borderColor:
+                          mission.disabled ? theme.colors.border : (selectedMission === mission.type ? mission.color : theme.colors.border),
+                        borderRadius: 12,
+                        padding: 12,
+                        alignItems: "center",
+                        opacity: mission.disabled ? 0.5 : 1,
+                      }}
+                    >
                     <Ionicons
                       name={mission.icon as keyof typeof Ionicons.glyphMap}
                       size={24}
@@ -267,7 +296,7 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                     <Text
                       style={{
                         color:
-                          selectedMission === mission.type ? mission.color : theme.colors.textSecondary,
+                          mission.disabled ? theme.colors.textSecondary : (selectedMission === mission.type ? mission.color : theme.colors.textSecondary),
                         fontSize: 12,
                         fontWeight: "600",
                         marginTop: 6,
