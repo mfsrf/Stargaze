@@ -500,9 +500,13 @@ export default function GalaxyScreen() {
               onPress={() => {
                 if (isOccupied && position.planet) {
                   handlePlanetClick(position.planet, isPlayerPlanet);
+                } else if (hasScoutData && scoutReport) {
+                  // Create synthetic planet from scout report
+                  const syntheticPlanet = buildScoutedPlanet(scoutReport);
+                  handlePlanetClick(syntheticPlanet, false);
                 }
               }}
-              disabled={!isOccupied}
+              disabled={!isOccupied && !hasScoutData}
               activeOpacity={0.7}
               style={{
                 backgroundColor: theme.colors.card,
@@ -577,9 +581,8 @@ export default function GalaxyScreen() {
                 
                 {/* Action Buttons */}
                 <View style={{ flexDirection: "row", gap: 8 }}>
-undefined
-                  {/* Scout Button for empty positions */}
-                  {!isOccupied && (
+                  {isOccupied && !isPlayerPlanet ? (
+                    // Attack button for occupied enemy planets
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
@@ -587,37 +590,83 @@ undefined
                       }}
                       activeOpacity={0.7}
                       style={{
-                        backgroundColor: theme.colors.primary + "20",
-                        padding: 8,
+                        backgroundColor: theme.colors.danger + "20",
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
                         borderRadius: 8,
-                        marginLeft: 6,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
                       }}
                     >
-                      <Ionicons name="compass" size={18} color={theme.colors.primary} />
+                      <Ionicons name="rocket" size={18} color={theme.colors.danger} />
+                      <Text style={{ color: theme.colors.danger, fontSize: 13, fontWeight: "600" }}>
+                        Attack
+                      </Text>
                     </TouchableOpacity>
-                  )}
-                  {!isOccupied && (
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleColonizeClick(position.coordinates);
-                      }}
-                      disabled={!hasColonyShip}
-                      activeOpacity={0.7}
-                      style={{
-                        backgroundColor: hasColonyShip ? theme.colors.success + "20" : theme.colors.border,
-                        padding: 8,
-                        borderRadius: 8,
-                        opacity: hasColonyShip ? 1 : 0.5,
-                      }}
-                    >
-                      <Ionicons 
-                        name={hasColonyShip ? "add-circle" : "lock-closed"} 
-                        size={18} 
-                        color={hasColonyShip ? theme.colors.success : theme.colors.textSecondary} 
-                      />
-                    </TouchableOpacity>
-                  )}
+                  ) : !isOccupied ? (
+                    // Buttons for empty positions
+                    <>
+                      {/* Scout Button */}
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleAttackClick(position.coordinates);
+                        }}
+                        disabled={hasScoutData}
+                        activeOpacity={0.7}
+                        style={{
+                          backgroundColor: hasScoutData 
+                            ? theme.colors.border 
+                            : theme.colors.primary + "20",
+                          padding: 8,
+                          borderRadius: 8,
+                          opacity: hasScoutData ? 0.5 : 1,
+                        }}
+                      >
+                        <Ionicons 
+                          name={hasScoutData ? "checkmark-circle" : "compass"} 
+                          size={18} 
+                          color={hasScoutData ? theme.colors.textSecondary : theme.colors.primary} 
+                        />
+                      </TouchableOpacity>
+                      
+                      {/* Colonize Button */}
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleColonizeClick(position.coordinates);
+                        }}
+                        disabled={!hasColonyShip}
+                        activeOpacity={0.7}
+                        style={{
+                          backgroundColor: hasColonyShip 
+                            ? theme.colors.success + "20" 
+                            : theme.colors.border,
+                          paddingVertical: 8,
+                          paddingHorizontal: 12,
+                          borderRadius: 8,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                          opacity: hasColonyShip ? 1 : 0.5,
+                        }}
+                      >
+                        <Ionicons 
+                          name={hasColonyShip ? "add-circle" : "lock-closed"} 
+                          size={18} 
+                          color={hasColonyShip ? theme.colors.success : theme.colors.textSecondary} 
+                        />
+                        <Text style={{ 
+                          color: hasColonyShip ? theme.colors.success : theme.colors.textSecondary, 
+                          fontSize: 13, 
+                          fontWeight: "600" 
+                        }}>
+                          Colonize
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : null}
                 </View>
               </View>
               
