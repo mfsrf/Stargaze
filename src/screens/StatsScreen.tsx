@@ -1,13 +1,15 @@
 // StatsScreen - rankings and statistics
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import useThemeStore from "../state/themeStore";
 import useGameStore from "../state/gameStore";
-import { formatNumber } from "../utils/gameFormulas";
+import { formatNumber, getBuildingCost, getTechnologyCost } from "../utils/gameFormulas";
+import { SHIP_BASE_COSTS, DEFENSE_BASE_COSTS } from "../utils/gameConstants";
+import { BuildingType, TechnologyType, ShipType, DefenseType } from "../types/game";
 import { RESPONSIVE } from "../utils/responsive";
 
 export default function StatsScreen() {
@@ -20,6 +22,71 @@ export default function StatsScreen() {
   useEffect(() => {
     calculatePlayerPoints();
   }, []);
+  
+  // Live-calc AI points (economy, research, military)
+  const aiRankings = useMemo(() => {
+    return aiPlayers.map((ai) => {
+      let economyPoints = 0;
+      let researchPoints = 0;
+      let militaryPoints = 0;
+      
+      // Buildings economy points
+      ai.planets.forEach((planet) => {
+        Object.entries(planet.buildings).forEach(([bType, level]) => {
+          if (level > 0) {
+            for (let i = 0; i < level; i++) {
+              const cost = getBuildingCost(bType as BuildingType, i);
+              economyPoints += (cost.metal + cost.crystal + cost.deuterium) / 1000;
+            }
+          }
+        });
+        // Defense points
+        Object.entries(planet.defense).forEach(([dType, count]) => {
+          if ((count as number) > 0) {
+            const base = DEFENSE_BASE_COSTS[dType as DefenseType];
+            militaryPoints += ((base.metal + base.crystal + base.deuterium) * (count as number)) / 1000;
+          }
+        });
+        // Fleet points
+        Object.entries(planet.fleet).forEach(([sType, count]) => {
+          if (count > 0) {
+            const base = SHIP_BASE_COSTS[sType as ShipType];
+            militaryPoints += ((base.metal + base.crystal + base.deuterium) * count) / 1000;
+          }
+        });
+      });
+      
+      // Active AI fleets count toward military
+      (ai.fleets || []).forEach((fleet) => {
+        Object.entries(fleet.ships).forEach(([sType, count]) => {
+          if (count > 0) {
+            const base = SHIP_BASE_COSTS[sType as ShipType];
+            militaryPoints += ((base.metal + base.crystal + base.deuterium) * count) / 1000;
+          }
+        });
+      });
+      
+      // Technologies points
+      Object.entries(ai.technologies).forEach(([tType, level]) => {
+        if (level > 0) {
+          for (let i = 0; i < level; i++) {
+            const cost = getTechnologyCost(tType as TechnologyType, i);
+            researchPoints += (cost.metal + cost.crystal + cost.deuterium) / 1000;
+          }
+        }
+      });
+      
+      const totalPoints = Math.floor(economyPoints + researchPoints + militaryPoints);
+      return {
+        name: ai.name,
+        isPlayer: false,
+        economyPoints: Math.floor(economyPoints),
+        researchPoints: Math.floor(researchPoints),
+        militaryPoints: Math.floor(militaryPoints),
+        totalPoints,
+      };
+    });
+  }, [aiPlayers]);
   
   // Calculate total resources across all planets
   const totalResources = player.planets.reduce(
@@ -49,7 +116,8 @@ export default function StatsScreen() {
     return total + Object.values(planet.buildings).reduce((sum, level) => sum + level, 0);
   }, 0);
   
-  // Create rankings with AI players
+
+  
   const allPlayers = [
     { 
       name: player.name, 
@@ -59,14 +127,7 @@ export default function StatsScreen() {
       militaryPoints: player.militaryPoints,
       isPlayer: true 
     },
-    ...aiPlayers.map((ai) => ({
-      name: ai.name,
-      totalPoints: 0, // AI points not calculated yet - we'll estimate
-      economyPoints: 0,
-      researchPoints: 0,
-      militaryPoints: 0,
-      isPlayer: false
-    }))
+    ...aiRankings
   ].sort((a, b) => b.totalPoints - a.totalPoints);
   
   const playerRank = allPlayers.findIndex((p) => p.isPlayer) + 1;
