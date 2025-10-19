@@ -1,7 +1,7 @@
 // SendFleetModal - modal for sending fleets on missions
 
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput } from "react-native";
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -231,7 +231,8 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
             </View>
           </View>
           
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
             {/* Mission Selection */}
             <View style={{ marginBottom: 20 }}>
               <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "600", marginBottom: 12 }}>
@@ -674,10 +675,11 @@ export default function SendFleetModal({ visible, onClose, planetId, targetCoord
                 </View>
               </View>
             )}
-          </ScrollView>
-          
-          {/* Send Button */}
-          <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+            </ScrollView>
+          </KeyboardAvoidingView>
+            
+            {/* Send Button */}
+            <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
             <TouchableOpacity
               onPress={handleSendFleet}
               disabled={!canSendFleet()}

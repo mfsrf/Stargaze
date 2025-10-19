@@ -556,6 +556,46 @@ export default function GalaxyScreen() {
                       />
                     </TouchableOpacity>
                   )}
+                  {/* Scout Button for empty positions */}
+                  {!isOccupied && (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleAttackClick(position.coordinates);
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        padding: 8,
+                        borderRadius: 8,
+                        marginLeft: 6,
+                      }}
+                    >
+                      <Ionicons name="compass" size={18} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                  {!isOccupied && (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleColonizeClick(position.coordinates);
+                      }}
+                      disabled={!hasColonyShip}
+                      activeOpacity={0.7}
+                      style={{
+                        backgroundColor: hasColonyShip ? theme.colors.success + "20" : theme.colors.border,
+                        padding: 8,
+                        borderRadius: 8,
+                        opacity: hasColonyShip ? 1 : 0.5,
+                      }}
+                    >
+                      <Ionicons 
+                        name={hasColonyShip ? "add-circle" : "lock-closed"} 
+                        size={18} 
+                        color={hasColonyShip ? theme.colors.success : theme.colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               
