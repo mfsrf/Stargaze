@@ -557,6 +557,71 @@ export default function StatsScreen() {
           </View>
         </View>
         
+        {/* AI Debug Info */}
+        <View style={{ 
+          backgroundColor: theme.colors.card,
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.warning,
+        }}>
+          <Text style={{ 
+            color: theme.colors.warning, 
+            fontSize: RESPONSIVE.fonts.large,
+            fontWeight: "700",
+            marginBottom: 12,
+          }}>
+            🔧 AI Debug Info
+          </Text>
+          
+          {aiPlayers.map((ai, idx) => {
+            const mainPlanet = ai.planets[0];
+            const now = Date.now();
+            const timeSinceLastAction = ((now - ai.lastActionTime) / 1000).toFixed(0);
+            const updateInterval = ai.difficulty === "easy" ? 30 : ai.difficulty === "medium" ? 20 : 10;
+            
+            return (
+              <View 
+                key={idx}
+                style={{
+                  padding: 12,
+                  backgroundColor: theme.colors.background,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontSize: RESPONSIVE.fonts.medium, fontWeight: "700", marginBottom: 6 }}>
+                  {ai.name} ({ai.strategy})
+                </Text>
+                
+                <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
+                  Resources: M: {Math.floor(mainPlanet.resources.metal)} | C: {Math.floor(mainPlanet.resources.crystal)} | D: {Math.floor(mainPlanet.resources.deuterium)}
+                </Text>
+                
+                <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
+                  Buildings: Robotics: {mainPlanet.buildings[BuildingType.RoboticsFactory]} | Shipyard: {mainPlanet.buildings[BuildingType.Shipyard]} | Metal Mine: {mainPlanet.buildings[BuildingType.MetalMine]}
+                </Text>
+                
+                <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
+                  Queue: {mainPlanet.constructionQueue.length} items | Fields: {mainPlanet.usedFields}/{mainPlanet.maxFields}
+                </Text>
+                
+                <Text style={{ 
+                  color: timeSinceLastAction >= updateInterval.toString() ? theme.colors.success : theme.colors.textSecondary, 
+                  fontSize: RESPONSIVE.fonts.small 
+                }}>
+                  Last action: {timeSinceLastAction}s ago (updates every {updateInterval}s)
+                </Text>
+                
+                <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
+                  Fleet: {Object.values(mainPlanet.fleet).reduce((sum, count) => sum + count, 0)} ships | Active Fleets: {(ai.fleets || []).length}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        
         {/* Rankings */}
         <View style={{ 
           backgroundColor: theme.colors.card,

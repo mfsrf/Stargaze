@@ -838,8 +838,8 @@ const useGameStore = create<GameStore>()(
                 const probeCount = fleet.ships[ShipType.EspionageProbe];
                 const espionageTech = state.player.technologies[TechnologyType.EspionageTech];
                 
-                // Determine what information is revealed (more probes = more info)
-                const infoLevel = Math.min(probeCount + espionageTech, 8);
+                // Determine what information is revealed (espionage tech has 2x weight)
+                const infoLevel = Math.min(probeCount + (espionageTech * 2), 10);
                 
                 // Build espionage report
                 const espionageReport: EspionageReport = {
@@ -868,6 +868,23 @@ const useGameStore = create<GameStore>()(
                 // Level 7+: See buildings
                 if (infoLevel >= 7) {
                   espionageReport.buildings = { ...actualTarget.buildings };
+                }
+                
+                // Level 9+: See research/technologies
+                if (infoLevel >= 9) {
+                  // Get technologies from the target (player or AI)
+                  if (targetPlanet) {
+                    // Target is the player - get player techs
+                    espionageReport.research = { ...state.player.technologies };
+                  } else if (targetAIPlanet) {
+                    // Target is an AI - get their techs
+                    const targetAI = state.aiPlayers.find(
+                      (ai) => ai.planets.some((p) => p.id === targetAIPlanet.id)
+                    );
+                    if (targetAI) {
+                      espionageReport.research = { ...targetAI.technologies };
+                    }
+                  }
                 }
                 
                 // Build report content
@@ -906,6 +923,16 @@ const useGameStore = create<GameStore>()(
                 if (espionageReport.buildings) {
                   reportContent += `🏗️ BUILDINGS:\n`;
                   Object.entries(espionageReport.buildings)
+                    .filter(([_, level]) => (level as number) > 0)
+                    .forEach(([type, level]) => {
+                      reportContent += `  • ${type}: Level ${level as number}\n`;
+                    });
+                  reportContent += "\n";
+                }
+                
+                if (espionageReport.research) {
+                  reportContent += `🔬 RESEARCH:\n`;
+                  Object.entries(espionageReport.research)
                     .filter(([_, level]) => (level as number) > 0)
                     .forEach(([type, level]) => {
                       reportContent += `  • ${type}: Level ${level as number}\n`;
@@ -2453,6 +2480,9 @@ const useGameStore = create<GameStore>()(
             }
           }
           
+          // Refresh mainPlanet reference after Priority 1
+          mainPlanet = updatedAI.planets[0];
+          
           // Priority 2: Build Shipyard once Robotics Factory is level 2+
           if (mainPlanet.buildings[BuildingType.Shipyard] === 0 && 
               mainPlanet.buildings[BuildingType.RoboticsFactory] >= 2 && 
@@ -2476,6 +2506,9 @@ const useGameStore = create<GameStore>()(
               updatedAI.planets[0] = mainPlanet;
             }
           }
+          
+          // Refresh mainPlanet reference after Priority 2
+          mainPlanet = updatedAI.planets[0];
           
           // Priority 3: Build Economy (always try to upgrade mines and energy)
           if (mainPlanet.constructionQueue.length < 5) {
@@ -2541,6 +2574,9 @@ const useGameStore = create<GameStore>()(
             }
           }
           
+          // Refresh mainPlanet reference after Priority 3
+          mainPlanet = updatedAI.planets[0];
+          
           // Priority 4: Build Military (if aggressive and have shipyard)
           if (updatedAI.personality.aggression > 0.4 && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
             const shipType = ai.strategy === "aggressive" ? ShipType.LightFighter : ShipType.SmallCargo;
@@ -2569,6 +2605,9 @@ const useGameStore = create<GameStore>()(
               }
             }
           }
+          
+          // Refresh mainPlanet reference after Priority 4
+          mainPlanet = updatedAI.planets[0];
           
           // Priority 5: Send Attack Fleet (if aggressive and has enough ships)
           if (Math.random() < updatedAI.personality.aggression * 0.5) {
