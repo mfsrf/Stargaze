@@ -2545,6 +2545,97 @@ const useGameStore = create<GameStore>()(
           // Refresh mainPlanet reference after Priority 2
           mainPlanet = updatedAI.planets[0];
           
+          // Priority 2.5: Upgrade storage if near capacity (CRITICAL!)
+          const metalCap = calculateStorageCapacity(mainPlanet.buildings[BuildingType.MetalStorage]);
+          const crystalCap = calculateStorageCapacity(mainPlanet.buildings[BuildingType.CrystalStorage]);
+          const deuteriumCap = calculateStorageCapacity(mainPlanet.buildings[BuildingType.DeuteriumTank]);
+          
+          if (mainPlanet.resources.metal >= metalCap * 0.9 && mainPlanet.constructionQueue.length < 5) {
+            const cost = getBuildingCost(BuildingType.MetalStorage, mainPlanet.buildings[BuildingType.MetalStorage]);
+            if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+              const now = Date.now();
+              const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              const buildTime = getBuildingConstructionTime(
+                BuildingType.MetalStorage,
+                mainPlanet.buildings[BuildingType.MetalStorage],
+                mainPlanet.buildings[BuildingType.RoboticsFactory],
+                mainPlanet.buildings[BuildingType.NaniteFactory]
+              ) * 1000;
+              
+              mainPlanet = {
+                ...mainPlanet,
+                resources: deductCost(mainPlanet.resources, cost),
+                constructionQueue: [...mainPlanet.constructionQueue, {
+                  id: uuidv4(),
+                  type: BuildingType.MetalStorage,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + buildTime : 0,
+                }],
+              };
+              updatedAI.planets[0] = mainPlanet;
+            }
+          }
+          
+          mainPlanet = updatedAI.planets[0];
+          if (mainPlanet.resources.crystal >= crystalCap * 0.9 && mainPlanet.constructionQueue.length < 5) {
+            const cost = getBuildingCost(BuildingType.CrystalStorage, mainPlanet.buildings[BuildingType.CrystalStorage]);
+            if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+              const now = Date.now();
+              const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              const buildTime = getBuildingConstructionTime(
+                BuildingType.CrystalStorage,
+                mainPlanet.buildings[BuildingType.CrystalStorage],
+                mainPlanet.buildings[BuildingType.RoboticsFactory],
+                mainPlanet.buildings[BuildingType.NaniteFactory]
+              ) * 1000;
+              
+              mainPlanet = {
+                ...mainPlanet,
+                resources: deductCost(mainPlanet.resources, cost),
+                constructionQueue: [...mainPlanet.constructionQueue, {
+                  id: uuidv4(),
+                  type: BuildingType.CrystalStorage,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + buildTime : 0,
+                }],
+              };
+              updatedAI.planets[0] = mainPlanet;
+            }
+          }
+          
+          mainPlanet = updatedAI.planets[0];
+          if (mainPlanet.resources.deuterium >= deuteriumCap * 0.9 && mainPlanet.constructionQueue.length < 5) {
+            const cost = getBuildingCost(BuildingType.DeuteriumTank, mainPlanet.buildings[BuildingType.DeuteriumTank]);
+            if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
+              const now = Date.now();
+              const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              const buildTime = getBuildingConstructionTime(
+                BuildingType.DeuteriumTank,
+                mainPlanet.buildings[BuildingType.DeuteriumTank],
+                mainPlanet.buildings[BuildingType.RoboticsFactory],
+                mainPlanet.buildings[BuildingType.NaniteFactory]
+              ) * 1000;
+              
+              mainPlanet = {
+                ...mainPlanet,
+                resources: deductCost(mainPlanet.resources, cost),
+                constructionQueue: [...mainPlanet.constructionQueue, {
+                  id: uuidv4(),
+                  type: BuildingType.DeuteriumTank,
+                  planetId: mainPlanet.id,
+                  startTime: isFirstInQueue ? now : 0,
+                  endTime: isFirstInQueue ? now + buildTime : 0,
+                }],
+              };
+              updatedAI.planets[0] = mainPlanet;
+            }
+          }
+          
+          // Refresh mainPlanet reference after Priority 2.5
+          mainPlanet = updatedAI.planets[0];
+          
           // Priority 3: Build Economy (always try to upgrade mines and energy)
           if (mainPlanet.constructionQueue.length < 5) {
             // Determine which building to upgrade based on current levels
@@ -2555,30 +2646,23 @@ const useGameStore = create<GameStore>()(
             const deuteriumLevel = mainPlanet.buildings[BuildingType.DeuteriumSynthesizer];
             const solarLevel = mainPlanet.buildings[BuildingType.SolarPlant];
             
-            // Smart building priority
-            if (solarLevel < metalLevel + crystalLevel + deuteriumLevel) {
+            // Smart building priority - Keep building infinitely based on economy personality
+            const economyGoal = updatedAI.personality.economy > 0.7 ? 50 : 30; // Higher goals for economic AI
+            
+            if (solarLevel < (metalLevel + crystalLevel + deuteriumLevel) / 2) {
               // Need more energy
               targetBuilding = BuildingType.SolarPlant;
-            } else if (metalLevel < 10) {
-              // Prioritize metal early game
+            } else if (metalLevel < economyGoal) {
+              // Prioritize metal
               targetBuilding = BuildingType.MetalMine;
-            } else if (crystalLevel < 8) {
+            } else if (crystalLevel < economyGoal - 5) {
               // Need crystal
               targetBuilding = BuildingType.CrystalMine;
-            } else if (deuteriumLevel < 6) {
+            } else if (deuteriumLevel < economyGoal - 10) {
               // Need deuterium
               targetBuilding = BuildingType.DeuteriumSynthesizer;
-            } else if (metalLevel < 20) {
-              // Continue metal
-              targetBuilding = BuildingType.MetalMine;
-            } else if (crystalLevel < 15) {
-              // Continue crystal
-              targetBuilding = BuildingType.CrystalMine;
-            } else if (deuteriumLevel < 12) {
-              // Continue deuterium
-              targetBuilding = BuildingType.DeuteriumSynthesizer;
             } else {
-              // Round-robin
+              // All goals met or exceeded, continue round-robin forever
               const lowest = Math.min(metalLevel, crystalLevel, deuteriumLevel);
               if (metalLevel === lowest) targetBuilding = BuildingType.MetalMine;
               else if (crystalLevel === lowest) targetBuilding = BuildingType.CrystalMine;
@@ -2619,11 +2703,17 @@ const useGameStore = create<GameStore>()(
           mainPlanet = updatedAI.planets[0];
           
           // Priority 4: Build Military (if aggressive and have shipyard)
-          if (updatedAI.personality.aggression > 0.4 && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
+          if (updatedAI.personality.aggression > 0.3 && mainPlanet.buildings[BuildingType.Shipyard] > 0) {
             const shipType = ai.strategy === "aggressive" ? ShipType.LightFighter : ShipType.SmallCargo;
             const shipCost = SHIP_BASE_COSTS[shipType];
-            const affordableQuantity = Math.floor(mainPlanet.resources.metal / shipCost.metal);
-            const quantity = Math.min(affordableQuantity, 10); // Max 10 at a time
+            const affordableQuantity = Math.floor(Math.min(
+              mainPlanet.resources.metal / shipCost.metal,
+              mainPlanet.resources.crystal / shipCost.crystal,
+              mainPlanet.resources.deuterium / shipCost.deuterium
+            ));
+            // Build more ships based on aggression: aggressive AI builds 20-50, others 5-15
+            const maxShips = updatedAI.personality.aggression > 0.7 ? 50 : 15;
+            const quantity = Math.min(affordableQuantity, maxShips);
             
             if (quantity > 0) {
               const totalCost = {
@@ -2656,16 +2746,16 @@ const useGameStore = create<GameStore>()(
             const defenseTypes = [DefenseType.RocketLauncher, DefenseType.LightLaser, DefenseType.HeavyLaser];
             const totalDefense = Object.values(mainPlanet.defense).reduce((sum, count) => sum + (count as number), 0);
             
-            // Build up to 50 defenses for turtles, 20 for economic AIs
-            const defenseGoal = ai.strategy === "turtle" ? 50 : 20;
+            // Build up to 200 defenses for turtles, 50 for economic AIs
+            const defenseGoal = ai.strategy === "turtle" ? 200 : 50;
             
             if (totalDefense < defenseGoal) {
               // Choose defense type based on availability
               let defenseType = DefenseType.RocketLauncher;
-              if (mainPlanet.defense[DefenseType.RocketLauncher] >= 10) {
+              if (mainPlanet.defense[DefenseType.RocketLauncher] >= 30) {
                 defenseType = DefenseType.LightLaser;
               }
-              if (mainPlanet.defense[DefenseType.LightLaser] >= 5) {
+              if (mainPlanet.defense[DefenseType.LightLaser] >= 20) {
                 defenseType = DefenseType.HeavyLaser;
               }
               
@@ -2674,7 +2764,8 @@ const useGameStore = create<GameStore>()(
                 mainPlanet.resources.metal / defenseCost.metal,
                 mainPlanet.resources.crystal / defenseCost.crystal
               ));
-              const quantity = Math.min(affordableQuantity, 5); // Build 5 at a time
+              // Turtle builds 20 at a time, others build 10
+              const quantity = Math.min(affordableQuantity, ai.strategy === "turtle" ? 20 : 10);
               
               if (quantity > 0) {
                 const totalCost = {
