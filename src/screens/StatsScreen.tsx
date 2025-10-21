@@ -592,7 +592,11 @@ export default function StatsScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontSize: RESPONSIVE.fonts.medium, fontWeight: "700", marginBottom: 6 }}>
-                  {ai.name} ({ai.strategy})
+                  {ai.name} - {ai.strategy.toUpperCase()} 
+                  {ai.strategy === "aggressive" && " 🗡️"}
+                  {ai.strategy === "economic" && " 💰"}
+                  {ai.strategy === "turtle" && " 🛡️"}
+                  {ai.strategy === "balanced" && " ⚖️"}
                 </Text>
                 
                 <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
@@ -604,7 +608,7 @@ export default function StatsScreen() {
                 </Text>
                 
                 <Text style={{ color: theme.colors.textSecondary, fontSize: RESPONSIVE.fonts.small }}>
-                  Queue: {mainPlanet.constructionQueue.length} items | Fields: {mainPlanet.usedFields}/{mainPlanet.maxFields}
+                  Defense: {Object.values(mainPlanet.defense).reduce((sum, count) => sum + (count as number), 0)} units | Queue: {mainPlanet.constructionQueue.length} items
                 </Text>
                 
                 <Text style={{ 

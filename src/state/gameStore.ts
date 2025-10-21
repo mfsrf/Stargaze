@@ -270,7 +270,7 @@ const useGameStore = create<GameStore>()(
           "Lord Kryton",
           "Admiral Nexus",
         ];
-        const strategies: Array<"defensive" | "balanced" | "aggressive"> = ["defensive", "balanced", "aggressive"];
+        const strategies: Array<"economic" | "balanced" | "aggressive" | "turtle"> = ["aggressive", "economic", "turtle", "balanced", "aggressive"];
         
         const allPlanets = [startingPlanet]; // Track all planets to avoid collisions
         
@@ -340,22 +340,34 @@ const useGameStore = create<GameStore>()(
           let personality;
           
           if (strategy === "aggressive") {
+            // AGGRESSIVE: High aggression, builds military, attacks frequently
             personality = {
-              aggression: 0.7 + Math.random() * 0.3, // 0.7-1.0
-              expansion: 0.4 + Math.random() * 0.3, // 0.4-0.7
-              economy: 0.3 + Math.random() * 0.3, // 0.3-0.6
-              technology: 0.4 + Math.random() * 0.2, // 0.4-0.6
+              aggression: 0.8 + Math.random() * 0.2, // 0.8-1.0
+              expansion: 0.3 + Math.random() * 0.2, // 0.3-0.5
+              economy: 0.3 + Math.random() * 0.2, // 0.3-0.5
+              technology: 0.3 + Math.random() * 0.2, // 0.3-0.5
               riskTolerance: 0.7 + Math.random() * 0.3, // 0.7-1.0
             };
-          } else if (strategy === "defensive") {
+          } else if (strategy === "economic") {
+            // ECONOMIC: Focuses on economy, expansion, colonization
             personality = {
               aggression: 0.1 + Math.random() * 0.2, // 0.1-0.3
-              expansion: 0.5 + Math.random() * 0.3, // 0.5-0.8
-              economy: 0.7 + Math.random() * 0.3, // 0.7-1.0
-              technology: 0.6 + Math.random() * 0.3, // 0.6-0.9
-              riskTolerance: 0.1 + Math.random() * 0.3, // 0.1-0.4
+              expansion: 0.8 + Math.random() * 0.2, // 0.8-1.0
+              economy: 0.8 + Math.random() * 0.2, // 0.8-1.0
+              technology: 0.5 + Math.random() * 0.3, // 0.5-0.8
+              riskTolerance: 0.2 + Math.random() * 0.2, // 0.2-0.4
+            };
+          } else if (strategy === "turtle") {
+            // TURTLE: Defensive, never colonizes, builds defense + fleet but stays home
+            personality = {
+              aggression: 0.0, // Never attacks
+              expansion: 0.0, // Never colonizes
+              economy: 0.6 + Math.random() * 0.2, // 0.6-0.8
+              technology: 0.7 + Math.random() * 0.3, // 0.7-1.0
+              riskTolerance: 0.0, // No risk
             };
           } else { // balanced
+            // BALANCED: Does everything moderately
             personality = {
               aggression: 0.4 + Math.random() * 0.3, // 0.4-0.7
               expansion: 0.5 + Math.random() * 0.3, // 0.5-0.8
@@ -2362,19 +2374,27 @@ const useGameStore = create<GameStore>()(
             let personality;
             if (ai.strategy === "aggressive") {
               personality = {
-                aggression: 0.7 + Math.random() * 0.3,
-                expansion: 0.4 + Math.random() * 0.3,
-                economy: 0.3 + Math.random() * 0.3,
-                technology: 0.4 + Math.random() * 0.2,
+                aggression: 0.8 + Math.random() * 0.2,
+                expansion: 0.3 + Math.random() * 0.2,
+                economy: 0.3 + Math.random() * 0.2,
+                technology: 0.3 + Math.random() * 0.2,
                 riskTolerance: 0.7 + Math.random() * 0.3,
               };
-            } else if (ai.strategy === "defensive") {
+            } else if (ai.strategy === "economic") {
               personality = {
                 aggression: 0.1 + Math.random() * 0.2,
-                expansion: 0.5 + Math.random() * 0.3,
-                economy: 0.7 + Math.random() * 0.3,
-                technology: 0.6 + Math.random() * 0.3,
-                riskTolerance: 0.1 + Math.random() * 0.3,
+                expansion: 0.8 + Math.random() * 0.2,
+                economy: 0.8 + Math.random() * 0.2,
+                technology: 0.5 + Math.random() * 0.3,
+                riskTolerance: 0.2 + Math.random() * 0.2,
+              };
+            } else if (ai.strategy === "turtle") {
+              personality = {
+                aggression: 0.0,
+                expansion: 0.0,
+                economy: 0.6 + Math.random() * 0.2,
+                technology: 0.7 + Math.random() * 0.3,
+                riskTolerance: 0.0,
               };
             } else {
               personality = {
@@ -2464,6 +2484,12 @@ const useGameStore = create<GameStore>()(
             if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
               const now = Date.now();
               const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              const buildTime = getBuildingConstructionTime(
+                BuildingType.RoboticsFactory,
+                0,
+                mainPlanet.buildings[BuildingType.RoboticsFactory],
+                mainPlanet.buildings[BuildingType.NaniteFactory]
+              ) * 1000;
               
               mainPlanet = {
                 ...mainPlanet,
@@ -2473,7 +2499,7 @@ const useGameStore = create<GameStore>()(
                   type: BuildingType.RoboticsFactory,
                   planetId: mainPlanet.id,
                   startTime: isFirstInQueue ? now : 0,
-                  endTime: isFirstInQueue ? now + 60000 : 0,
+                  endTime: isFirstInQueue ? now + buildTime : 0,
                 }],
               };
               updatedAI.planets[0] = mainPlanet;
@@ -2491,6 +2517,12 @@ const useGameStore = create<GameStore>()(
             if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
               const now = Date.now();
               const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+              const buildTime = getBuildingConstructionTime(
+                BuildingType.Shipyard,
+                0,
+                mainPlanet.buildings[BuildingType.RoboticsFactory],
+                mainPlanet.buildings[BuildingType.NaniteFactory]
+              ) * 1000;
               
               mainPlanet = {
                 ...mainPlanet,
@@ -2500,7 +2532,7 @@ const useGameStore = create<GameStore>()(
                   type: BuildingType.Shipyard,
                   planetId: mainPlanet.id,
                   startTime: isFirstInQueue ? now : 0,
-                  endTime: isFirstInQueue ? now + 60000 : 0,
+                  endTime: isFirstInQueue ? now + buildTime : 0,
                 }],
               };
               updatedAI.planets[0] = mainPlanet;
@@ -2557,6 +2589,12 @@ const useGameStore = create<GameStore>()(
               if (canAfford(mainPlanet.resources, cost) && calculateUsedFields(mainPlanet) < mainPlanet.maxFields) {
                 const now = Date.now();
                 const isFirstInQueue = mainPlanet.constructionQueue.length === 0;
+                const buildTime = getBuildingConstructionTime(
+                  targetBuilding,
+                  currentLevel,
+                  mainPlanet.buildings[BuildingType.RoboticsFactory],
+                  mainPlanet.buildings[BuildingType.NaniteFactory]
+                ) * 1000;
                 
                 mainPlanet = {
                   ...mainPlanet,
@@ -2566,7 +2604,7 @@ const useGameStore = create<GameStore>()(
                     type: targetBuilding,
                     planetId: mainPlanet.id,
                     startTime: isFirstInQueue ? now : 0,
-                    endTime: isFirstInQueue ? now + 60000 : 0,
+                    endTime: isFirstInQueue ? now + buildTime : 0,
                   }],
                 };
                 updatedAI.planets[0] = mainPlanet;
@@ -2607,6 +2645,58 @@ const useGameStore = create<GameStore>()(
           }
           
           // Refresh mainPlanet reference after Priority 4
+          mainPlanet = updatedAI.planets[0];
+          
+          // Priority 4.5: Build Defense (for turtle AI or if low aggression, high economy)
+          if (ai.strategy === "turtle" || (updatedAI.personality.aggression < 0.4 && updatedAI.personality.economy > 0.6)) {
+            // Turtle AI should build defenses
+            const defenseTypes = [DefenseType.RocketLauncher, DefenseType.LightLaser, DefenseType.HeavyLaser];
+            const totalDefense = Object.values(mainPlanet.defense).reduce((sum, count) => sum + (count as number), 0);
+            
+            // Build up to 50 defenses for turtles, 20 for economic AIs
+            const defenseGoal = ai.strategy === "turtle" ? 50 : 20;
+            
+            if (totalDefense < defenseGoal) {
+              // Choose defense type based on availability
+              let defenseType = DefenseType.RocketLauncher;
+              if (mainPlanet.defense[DefenseType.RocketLauncher] >= 10) {
+                defenseType = DefenseType.LightLaser;
+              }
+              if (mainPlanet.defense[DefenseType.LightLaser] >= 5) {
+                defenseType = DefenseType.HeavyLaser;
+              }
+              
+              const defenseCost = DEFENSE_BASE_COSTS[defenseType];
+              const affordableQuantity = Math.floor(Math.min(
+                mainPlanet.resources.metal / defenseCost.metal,
+                mainPlanet.resources.crystal / defenseCost.crystal
+              ));
+              const quantity = Math.min(affordableQuantity, 5); // Build 5 at a time
+              
+              if (quantity > 0) {
+                const totalCost = {
+                  metal: defenseCost.metal * quantity,
+                  crystal: defenseCost.crystal * quantity,
+                  deuterium: defenseCost.deuterium * quantity,
+                  energy: 0,
+                };
+                
+                if (canAfford(mainPlanet.resources, totalCost)) {
+                  mainPlanet = {
+                    ...mainPlanet,
+                    resources: deductCost(mainPlanet.resources, totalCost),
+                    defense: {
+                      ...mainPlanet.defense,
+                      [defenseType]: mainPlanet.defense[defenseType] + quantity,
+                    },
+                  };
+                  updatedAI.planets[0] = mainPlanet;
+                }
+              }
+            }
+          }
+          
+          // Refresh mainPlanet reference after Priority 4.5
           mainPlanet = updatedAI.planets[0];
           
           // Priority 5: Send Attack Fleet (if aggressive and has enough ships)

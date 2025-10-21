@@ -305,7 +305,7 @@ export interface AIPlayer {
   technologies: TechnologyLevels;
   fleets: Fleet[];
   lastActionTime: number;
-  strategy: "defensive" | "balanced" | "aggressive";
+  strategy: "economic" | "balanced" | "aggressive" | "turtle";
   targetPlayer?: string;
   personality: {
     aggression: number; // 0-1: How likely to attack
