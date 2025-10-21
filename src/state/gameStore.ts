@@ -313,8 +313,8 @@ const useGameStore = create<GameStore>()(
               ? "medium"
               : "hard";
           
-          // Give AI some starting resources based on difficulty
-          const resourceMultiplier = difficulty === "easy" ? 1.2 : difficulty === "medium" ? 1.5 : 2;
+          // Give AI some starting resources based on difficulty (boosted to ensure they can build)
+          const resourceMultiplier = difficulty === "easy" ? 2 : difficulty === "medium" ? 3 : 4;
           aiPlanet.resources = {
             metal: STARTING_RESOURCES.metal * resourceMultiplier,
             crystal: STARTING_RESOURCES.crystal * resourceMultiplier,
@@ -2408,15 +2408,9 @@ const useGameStore = create<GameStore>()(
             ai = { ...ai, personality };
           }
           
-          // Only update AI every 10-30 seconds based on difficulty (faster than before)
-          const updateInterval = ai.difficulty === "easy" ? 30000 : ai.difficulty === "medium" ? 20000 : 10000;
-          if (currentTime - ai.lastActionTime < updateInterval) {
-            return ai;
-          }
+          let updatedAI = { ...ai };
           
-          let updatedAI = { ...ai, lastActionTime: currentTime };
-          
-          // Update AI resources for all planets
+          // ALWAYS update AI resources and process queues (every tick)
           updatedAI.planets = updatedAI.planets.map((planet) => {
             const production = calculatePlanetProduction(planet, state.settings.resourceMultiplier);
             const timeDelta = (currentTime - planet.lastUpdate) / 1000;
@@ -2473,6 +2467,15 @@ const useGameStore = create<GameStore>()(
             updatedPlanet.constructionQueue = updatedQueue;
             return updatedPlanet;
           });
+          
+          // Only make AI DECISIONS every 10-30 seconds based on difficulty
+          const updateInterval = ai.difficulty === "easy" ? 30000 : ai.difficulty === "medium" ? 20000 : 10000;
+          if (currentTime - ai.lastActionTime < updateInterval) {
+            return updatedAI; // Return with updated resources but no new decisions
+          }
+          
+          // Update lastActionTime since we're making decisions now
+          updatedAI.lastActionTime = currentTime;
           
           // AI Decision Making
           let mainPlanet = updatedAI.planets[0];
